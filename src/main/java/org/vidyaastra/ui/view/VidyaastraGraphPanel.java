@@ -113,47 +113,71 @@ public class VidyaastraGraphPanel extends JPanel
    
    private void addChildrenToGraph(OWLEntity parent)
    {
-      if (!(parent instanceof OWLClass)) return;
       if (!expandedNodes.contains(parent)) return;
       
-      OWLClass parentClass = (OWLClass) parent;
-      
-      // Get direct subclasses
-      Set<OWLClass> subClasses = ontology.getAxioms(org.semanticweb.owlapi.model.AxiomType.SUBCLASS_OF)
-            .stream()
-            .filter(ax -> !ax.getSuperClass().isAnonymous() && 
-                         ax.getSuperClass().asOWLClass().equals(parentClass))
-            .filter(ax -> !ax.getSubClass().isAnonymous())
-            .map(ax -> ax.getSubClass().asOWLClass())
-            .collect(java.util.stream.Collectors.toSet());
-      
-      for (OWLClass subClass : subClasses) {
-         if (!subClass.isOWLThing() && !subClass.isOWLNothing()) {
-            graph.addVertex(subClass);
-            graph.addEdge(new OWLRelationship(subClass, parentClass, "subClassOf"), 
-                        subClass, parentClass);
-            
-            // Recursively add children if this node is expanded
-            if (expandedNodes.contains(subClass)) {
-               addChildrenToGraph(subClass);
+      // Handle Classes - show subclasses and instances
+      if (parent instanceof OWLClass) {
+         OWLClass parentClass = (OWLClass) parent;
+         
+         // Get direct subclasses
+         Set<OWLClass> subClasses = ontology.getAxioms(org.semanticweb.owlapi.model.AxiomType.SUBCLASS_OF)
+               .stream()
+               .filter(ax -> !ax.getSuperClass().isAnonymous() && 
+                            ax.getSuperClass().asOWLClass().equals(parentClass))
+               .filter(ax -> !ax.getSubClass().isAnonymous())
+               .map(ax -> ax.getSubClass().asOWLClass())
+               .collect(java.util.stream.Collectors.toSet());
+         
+         for (OWLClass subClass : subClasses) {
+            if (!subClass.isOWLThing() && !subClass.isOWLNothing()) {
+               graph.addVertex(subClass);
+               graph.addEdge(new OWLRelationship(subClass, parentClass, "subClassOf"), 
+                           subClass, parentClass);
+               
+               // Recursively add children if this node is expanded
+               if (expandedNodes.contains(subClass)) {
+                  addChildrenToGraph(subClass);
+               }
             }
          }
+         
+         // Also get instances of this class
+         Set<org.semanticweb.owlapi.model.OWLNamedIndividual> instances = ontology.getAxioms(org.semanticweb.owlapi.model.AxiomType.CLASS_ASSERTION)
+               .stream()
+               .filter(ax -> !ax.getClassExpression().isAnonymous() && 
+                            ax.getClassExpression().asOWLClass().equals(parentClass))
+               .map(ax -> ax.getIndividual())
+               .filter(ind -> ind.isNamed())
+               .map(ind -> ind.asOWLNamedIndividual())
+               .collect(java.util.stream.Collectors.toSet());
+         
+         for (org.semanticweb.owlapi.model.OWLNamedIndividual instance : instances) {
+            graph.addVertex(instance);
+            graph.addEdge(new OWLRelationship(instance, parentClass, "instanceOf"), 
+                        instance, parentClass);
+         }
       }
-      
-      // Also get instances of this class
-      Set<org.semanticweb.owlapi.model.OWLNamedIndividual> instances = ontology.getAxioms(org.semanticweb.owlapi.model.AxiomType.CLASS_ASSERTION)
-            .stream()
-            .filter(ax -> !ax.getClassExpression().isAnonymous() && 
-                         ax.getClassExpression().asOWLClass().equals(parentClass))
-            .map(ax -> ax.getIndividual())
-            .filter(ind -> ind.isNamed())
-            .map(ind -> ind.asOWLNamedIndividual())
-            .collect(java.util.stream.Collectors.toSet());
-      
-      for (org.semanticweb.owlapi.model.OWLNamedIndividual instance : instances) {
-         graph.addVertex(instance);
-         graph.addEdge(new OWLRelationship(instance, parentClass, "instanceOf"), 
-                     instance, parentClass);
+      // Handle Individuals - show object property relationships
+      else if (parent instanceof OWLNamedIndividual) {
+         OWLNamedIndividual individual = (OWLNamedIndividual) parent;
+         
+         // Get all object property assertions where this individual is the subject
+         ontology.getObjectPropertyAssertionAxioms(individual).forEach(ax -> {
+            OWLObjectProperty property = ax.getProperty().asOWLObjectProperty();
+            org.semanticweb.owlapi.model.OWLIndividual object = ax.getObject();
+            
+            if (object.isNamed()) {
+               OWLNamedIndividual targetIndividual = object.asOWLNamedIndividual();
+               
+               // Add the target individual if not already in graph
+               graph.addVertex(targetIndividual);
+               
+               // Add edge with property name
+               String propertyName = property.getIRI().getShortForm();
+               graph.addEdge(new OWLRelationship(individual, targetIndividual, propertyName), 
+                           individual, targetIndividual);
+            }
+         });
       }
    }
    
@@ -181,26 +205,46 @@ public class VidyaastraGraphPanel extends JPanel
    
    private void removeDescendants(OWLEntity parent)
    {
-      if (!(parent instanceof OWLClass)) return;
-      
-      OWLClass parentClass = (OWLClass) parent;
-      
-      // Find and remove all descendants (subclasses and instances)
       Set<OWLEntity> toRemove = new HashSet<>();
-      for (OWLEntity vertex : new HashSet<>(graph.getVertices())) {
-         // Remove subclasses
-         if (vertex instanceof OWLClass && isDescendantOf((OWLClass)vertex, parentClass)) {
-            toRemove.add(vertex);
-            expandedNodes.remove(vertex);
-         }
-         // Remove instances of this class
-         else if (vertex instanceof OWLNamedIndividual) {
-            boolean isInstanceOfParent = ontology.getClassAssertionAxioms((OWLNamedIndividual)vertex)
-                  .stream()
-                  .anyMatch(ax -> !ax.getClassExpression().isAnonymous() && 
-                                 ax.getClassExpression().asOWLClass().equals(parentClass));
-            if (isInstanceOfParent) {
+      
+      // Handle Classes - remove subclasses and instances
+      if (parent instanceof OWLClass) {
+         OWLClass parentClass = (OWLClass) parent;
+         
+         for (OWLEntity vertex : new HashSet<>(graph.getVertices())) {
+            // Remove subclasses
+            if (vertex instanceof OWLClass && isDescendantOf((OWLClass)vertex, parentClass)) {
                toRemove.add(vertex);
+               expandedNodes.remove(vertex);
+            }
+            // Remove instances of this class
+            else if (vertex instanceof OWLNamedIndividual) {
+               boolean isInstanceOfParent = ontology.getClassAssertionAxioms((OWLNamedIndividual)vertex)
+                     .stream()
+                     .anyMatch(ax -> !ax.getClassExpression().isAnonymous() && 
+                                    ax.getClassExpression().asOWLClass().equals(parentClass));
+               if (isInstanceOfParent) {
+                  toRemove.add(vertex);
+               }
+            }
+         }
+      }
+      // Handle Individuals - remove related individuals added via object properties
+      else if (parent instanceof OWLNamedIndividual) {
+         OWLNamedIndividual individual = (OWLNamedIndividual) parent;
+         
+         // Remove all individuals that were added as targets of this individual's relationships
+         for (OWLEntity vertex : new HashSet<>(graph.getVertices())) {
+            if (vertex instanceof OWLNamedIndividual && !vertex.equals(parent)) {
+               // Check if there's an edge from parent to this vertex
+               for (OWLRelationship edge : new HashSet<>(graph.getEdges())) {
+                  if (edge.getSource().equals(parent) && edge.getTarget().equals(vertex)) {
+                     // Only remove if this vertex was added solely through this relationship
+                     // (i.e., it's not also an instance shown from a class expansion)
+                     toRemove.add(vertex);
+                     expandedNodes.remove(vertex);
+                  }
+               }
             }
          }
       }
@@ -231,25 +275,37 @@ public class VidyaastraGraphPanel extends JPanel
       return false;
    }
    
-   private boolean hasChildren(OWLClass parentClass)
+   private boolean hasChildren(OWLEntity entity)
    {
       if (ontology == null) return false;
       
-      // Check for subclasses
-      boolean hasSubClasses = ontology.getAxioms(org.semanticweb.owlapi.model.AxiomType.SUBCLASS_OF)
-            .stream()
-            .anyMatch(ax -> !ax.getSuperClass().isAnonymous() && 
-                           ax.getSuperClass().asOWLClass().equals(parentClass) &&
-                           !ax.getSubClass().isAnonymous());
+      // For classes: check for subclasses or instances
+      if (entity instanceof OWLClass) {
+         OWLClass parentClass = (OWLClass) entity;
+         
+         // Check for subclasses
+         boolean hasSubClasses = ontology.getAxioms(org.semanticweb.owlapi.model.AxiomType.SUBCLASS_OF)
+               .stream()
+               .anyMatch(ax -> !ax.getSuperClass().isAnonymous() && 
+                              ax.getSuperClass().asOWLClass().equals(parentClass) &&
+                              !ax.getSubClass().isAnonymous());
+         
+         // Check for instances
+         boolean hasInstances = ontology.getAxioms(org.semanticweb.owlapi.model.AxiomType.CLASS_ASSERTION)
+               .stream()
+               .anyMatch(ax -> !ax.getClassExpression().isAnonymous() && 
+                              ax.getClassExpression().asOWLClass().equals(parentClass) &&
+                              ax.getIndividual().isNamed());
+         
+         return hasSubClasses || hasInstances;
+      }
+      // For individuals: check for object property relationships
+      else if (entity instanceof OWLNamedIndividual) {
+         OWLNamedIndividual individual = (OWLNamedIndividual) entity;
+         return !ontology.getObjectPropertyAssertionAxioms(individual).isEmpty();
+      }
       
-      // Check for instances
-      boolean hasInstances = ontology.getAxioms(org.semanticweb.owlapi.model.AxiomType.CLASS_ASSERTION)
-            .stream()
-            .anyMatch(ax -> !ax.getClassExpression().isAnonymous() && 
-                           ax.getClassExpression().asOWLClass().equals(parentClass) &&
-                           ax.getIndividual().isNamed());
-      
-      return hasSubClasses || hasInstances;
+      return false;
    }
 
    private void createViewer()
@@ -277,8 +333,8 @@ public class VidyaastraGraphPanel extends JPanel
       viewer.getRenderContext().setVertexLabelTransformer(entity -> {
          String label = entity.getIRI().getShortForm();
          
-         // Add indicator for expandable nodes
-         if (entity instanceof OWLClass && hasChildren((OWLClass)entity)) {
+         // Add indicator for expandable nodes (both classes and individuals)
+         if (hasChildren(entity)) {
             if (expandedNodes.contains(entity)) {
                return "[-] " + label; // Expanded (can collapse)
             } else {
@@ -359,17 +415,38 @@ public class VidyaastraGraphPanel extends JPanel
 
    private void setupEdgeRenderer()
    {
-      // Don't show edge labels by default (cleaner look)
-      viewer.getRenderContext().setEdgeLabelTransformer(rel -> ""); // Empty for cleaner view
+      // Show edge labels - display relationship type
+      viewer.getRenderContext().setEdgeLabelTransformer((OWLRelationship rel) -> {
+         String relationshipType = rel.getRelationType();
+         // Show property names for object properties, but hide "subClassOf" and "instanceOf" for cleaner look
+         if (relationshipType.equals("subClassOf") || relationshipType.equals("instanceOf")) {
+            return "";
+         }
+         return relationshipType;
+      });
 
-      // Professional edge color
-      viewer.getRenderContext().setEdgeDrawPaintTransformer(rel -> new Color(105, 105, 105)); // Dim gray
+      // Professional edge color - different colors for different relationship types
+      viewer.getRenderContext().setEdgeDrawPaintTransformer((OWLRelationship rel) -> {
+         String relType = rel.getRelationType();
+         if (relType.equals("subClassOf")) {
+            return new Color(105, 105, 105); // Dim gray for hierarchy
+         } else if (relType.equals("instanceOf")) {
+            return new Color(147, 112, 219); // Medium purple for instances
+         } else {
+            return new Color(34, 139, 34); // Forest green for object properties
+         }
+      });
 
-      // Thicker, more visible edge stroke with arrow
-      viewer.getRenderContext().setEdgeStrokeTransformer(rel -> {
-         float[] dash = {10.0f, 5.0f};
-         return new BasicStroke(2.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 
-                               10.0f, dash, 0.0f); // Dashed line for hierarchy
+      // Edge stroke - solid for object properties, dashed for hierarchy
+      viewer.getRenderContext().setEdgeStrokeTransformer((OWLRelationship rel) -> {
+         String relType = rel.getRelationType();
+         if (relType.equals("subClassOf") || relType.equals("instanceOf")) {
+            float[] dash = {10.0f, 5.0f};
+            return new BasicStroke(2.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 
+                                  10.0f, dash, 0.0f); // Dashed line for hierarchy
+         } else {
+            return new BasicStroke(2.5f); // Solid, thicker line for object properties
+         }
       });
 
       // Show directional arrows for edges
@@ -377,6 +454,9 @@ public class VidyaastraGraphPanel extends JPanel
       
       // Larger arrow size
       viewer.getRenderContext().setEdgeArrowStrokeTransformer(edge -> new BasicStroke(1.5f));
+      
+      // Edge label font - make property names visible
+      viewer.getRenderContext().setEdgeFontTransformer(edge -> new Font("SansSerif", Font.PLAIN, 10));
    }
 
    private void setupMouseControl()
