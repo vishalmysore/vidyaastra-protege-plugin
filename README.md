@@ -1,111 +1,97 @@
-# Vidyaastra Plugin
+# VidyaAstra Plugin
 
-A Protégé Desktop plugin for AI Integration with Large Language Models and Interactive Graph Visualization.
+**VidyaAstra** is an AI-powered plugin for Protégé that brings intelligent ontology visualization and AI integration capabilities to your knowledge engineering workflow.
 
-## Overview
-
-Vidyaastra  plugin  designed to provide AI integration capabilities and interactive graph visualization within Protégé. It enables users to:
-
-1. Send queries to Large Language Models (LLMs) and receive intelligent responses
-2. Visualize ontology structure through interactive graph views
-3. Query graph using NLP commands
+![VidyaAstra Screenshot](vidyaastra.jpg)
 
 ## Features
 
-### AI Integration
-- **Interactive AI Query Interface**: Intuitive UI integrated into Protégé's Tools menu
-- **Context-Aware**: Displays current ontology information in the interface
-- **Clean Design**: Separate query input and response display areas
-- **Extensible**: Easy to integrate with various LLM APIs (OpenAI, Azure OpenAI, etc.)
+### 🤖 AI Integration
+**Query your ontology using natural language powered by Large Language Models**
 
-### VidyaAstra Graph
-- **Interactive Graph Visualization**: Tab view showing ontology structure as a graph
-- **Multiple Layout Algorithms**: FR, Circle, KK, Spring, and ISOM layouts
-- **Entity Distinction**: Visual differentiation between classes and object properties
-- **Interactive Controls**: Zoom, pan, and click-to-select functionality
-- **Relationship Display**: Automatic visualization of subclass relationships
-- **Customizable**: Toolbar with refresh and layout switching options
+- **Interactive AI Query Interface**: Ask questions about your ontology in plain English
+- **Context-Aware Responses**: The AI understands your current ontology context
+- **LLM Integration Ready**: Extensible architecture supports OpenAI, Azure OpenAI, and custom endpoints
+- **Clean, Intuitive UI**: Separate query input and response display areas for easy interaction
+- **Accessible from Tools Menu**: Quick access via **Tools > AI Integration - Send Query to LLM...**
+
+### 📊 VidyaAstra Graph - Interactive Ontology Visualization
+**Explore your ontology structure through powerful, interactive graph visualization**
+
+- **Hierarchical Display**: Automatically shows class hierarchies with expand/collapse functionality
+- **Instance Visualization**: View individuals and their relationships to classes
+- **Object Property Relationships**: Expand individuals to see all their connections (just like OntoGraf!)
+- **Visual Differentiation**: 
+  - **Blue circles** for classes
+  - **Pink squares** for individuals
+  - **Green lines** for object properties
+  - **Gray dashed lines** for class hierarchies
+  - **Purple dashed lines** for instance relationships
+- **Interactive Controls**:
+  - **Double-click** nodes to expand/collapse relationships
+  - **Drag** individual nodes to reposition
+  - **Pan and Zoom** for easy navigation
+  - **[+]/[-]** indicators show expandable/collapsible nodes
+- **Multiple Layout Algorithms**: Choose from FR (Fruchterman-Reingold), Circle, KK (Kamada-Kawai), Spring, and ISOM layouts
+- **Edge Labels**: See relationship names (alliedWith, mentored, killed, etc.) directly on the graph
+- **Smart Node Sizing**: Nodes automatically resize to fit labels
+- **Gold Selection Highlight**: Selected entities are highlighted in gold for easy identification
 
 ## Requirements
 
-- Java 11 or higher
-- Protégé 5.6.4 or higher
-- Maven 3.x (for building from source)
+- **Java**: 11 or higher
+- **Protégé**: 5.6.4 or higher
+- **Maven**: 3.x (for building from source)
 
 ## Installation
 
-### From Source
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/protegeproject/vidyaastra-plugin.git
-   cd vidyaastra-plugin
-   ```
-
-2. Build the plugin:
+1. **Build the plugin**:
    ```bash
    mvn clean package
    ```
 
-3. Copy the generated JAR file from `target/vidyaastra-1.0.0.jar` to your Protégé plugins folder:
-   - Windows: `%APPDATA%\Protege\plugins`
-   - macOS: `~/Library/Application Support/Protege/plugins`
-   - Linux: `~/.Protege/plugins`
+2. **Copy the JAR** from `target/vidyaastra-1.0.0.jar` to your Protégé plugins folder:
+   - **Windows**: `C:\Users\<username>\protege\Protege-5.6.x\plugins\`
+   - **macOS**: `~/Library/Application Support/Protege/plugins`
+   - **Linux**: `~/.Protege/plugins`
 
-4. Restart Protégé
+3. **Restart Protégé**
 
 ## Usage
 
-### AI Integration
-
-1. Open your ontology in Protégé
-2. Navigate to **Tools > AI Integration - Send Query to LLM...**
-3. Enter your query in the text area
-4. Click **Send Query** to interact with the AI service
-5. View the response in the response panel below
-
-### VidyaAstra Graph
+### Using VidyaAstra Graph
 
 1. Open your ontology in Protégé
 2. Navigate to **Window > Views > Ontology views > VidyaAstra Graph**
-3. The graph will automatically display your ontology structure
-4. Use the toolbar to:
-   - Switch between layout algorithms (FR, Circle, KK, Spring, ISOM)
-   - Zoom in/out
-   - Reset view
-   - Refresh graph after ontology changes
-5. Click on nodes to select entities
-6. Drag to pan the view
-7. Use mouse wheel to zoom
+3. The graph displays root classes automatically
+4. **Double-click** any class with **[+]** to expand and see:
+   - Subclasses (connected with gray dashed lines)
+   - Instances (connected with purple dashed lines)
+5. **Double-click** any individual with **[+]** to see:
+   - Related individuals via object properties (connected with green solid lines)
+   - Property names displayed as edge labels
+6. **Single-click** to select entities (turns gold)
+7. Use toolbar buttons to:
+   - Switch layout algorithms
+   - Toggle between **Drag Nodes** and **Pan/Zoom** modes
+   - Zoom in/out or reset view
+   - Refresh the graph
 
+### Using AI Integration
 
-## Configuration
+1. Open your ontology in Protégé
+2. Navigate to **Tools > AI Integration - Send Query to LLM...**
+3. Enter your query (e.g., "Explain the class hierarchy" or "What properties does Person have?")
+4. Click **Send Query**
+5. View AI-generated responses in the panel below
 
-The plugin uses the following dependencies:
-- Protégé Editor Core & OWL (5.6.4)
-- Apache POI (5.4.0)
-- Log4j (2.20.0)
-- Apache Commons libraries
-- JUNG 2.1.1 (Java Universal Network/Graph Framework)
-- JGraphT 1.5.2
+## Technology Stack
 
-## Future Enhancements
-
-### AI Integration
-- Integration with OpenAI API
-- Integration with Azure OpenAI Service
-- Support for custom LLM endpoints
-- Query history and session management
-- Export responses to files
-- Advanced prompt templates
-- Configuration UI for API keys and settings
-
-### Graph Visualization
-- Graph export (PNG, SVG, PDF)
-- Advanced filtering options
-- Custom node and edge styling
-- Show/hide specific relationship types
-- Search and highlight in graph
-- Clustering and grouping options
+- **Protégé API** (5.6.4) - Ontology access and manipulation
+- **JUNG 2.1.1** - Java Universal Network/Graph Framework for visualization
+- **JGraphT 1.5.2** - Graph algorithms and data structures
+- **OWL API** - Ontology processing
+- **Apache POI** (5.4.0) - Document processing
+- **Log4j 2** (2.20.0) - Logging
 
 
