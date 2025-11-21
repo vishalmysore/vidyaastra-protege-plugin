@@ -4,10 +4,11 @@ A Protégé Desktop plugin for AI Integration with Large Language Models and Int
 
 ## Overview
 
-Vidyaastra is a white-labeled plugin based on the Cellfie plugin architecture, designed to provide AI integration capabilities and interactive graph visualization within Protégé. It enables users to:
+Vidyaastra  plugin  designed to provide AI integration capabilities and interactive graph visualization within Protégé. It enables users to:
 
 1. Send queries to Large Language Models (LLMs) and receive intelligent responses
 2. Visualize ontology structure through interactive graph views
+3. Query graph using NLP commands
 
 ## Features
 
@@ -77,37 +78,6 @@ Vidyaastra is a white-labeled plugin based on the Cellfie plugin architecture, d
 6. Drag to pan the view
 7. Use mouse wheel to zoom
 
-## Project Structure
-
-```
-vidyaastra-plugin/
-├── src/
-│   └── main/
-│       ├── java/
-│       │   └── org/
-│       │       └── vidyaastra/
-│       │           ├── action/
-│       │           │   └── VidyaastraAction.java
-│       │           └── ui/
-│       │               ├── VidyaastraDialogManager.java
-│       │               ├── exception/
-│       │               │   └── VidyaastraException.java
-│       │               └── view/
-│       │                   ├── AIQueryPanel.java
-│       │                   ├── LogUtils.java
-│       │                   ├── VidyaastraGraphView.java
-│       │                   └── VidyaastraGraphPanel.java
-│       └── resources/
-│           └── readme.html
-├── update-info/
-│   ├── protege-4/
-│   │   └── update.properties
-│   └── protege-5/
-│       └── update.properties
-├── plugin.xml
-├── pom.xml
-└── README.md
-```
 
 ## Configuration
 
@@ -138,19 +108,4 @@ The plugin uses the following dependencies:
 - Search and highlight in graph
 - Clustering and grouping options
 
-## License
 
-This project is licensed under the GNU Lesser General Public License (LGPL).
-See [LICENSE](https://www.gnu.org/licenses/lgpl.html) for details.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Acknowledgments
-
-This plugin is based on the architecture of the [Cellfie Plugin](https://github.com/protegeproject/cellfie-plugin) for Protégé.
-
-## Contact
-
-For questions, issues, or suggestions, please open an issue on the GitHub repository.
