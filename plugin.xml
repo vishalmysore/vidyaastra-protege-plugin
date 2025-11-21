@@ -16,7 +16,6 @@
       <label value="VidyaAstra Graph"/>
       <class value="org.vidyaastra.ui.view.VidyaastraGraphView"/>
       <headerColor value="@org.protege.editor.owl.OWLEditorKit"/>
-      <category value="@org.protege.editor.owl.ui.view.ontology.OWLOntologyViewsCategory"/>
    </extension>
 </plugin>
 

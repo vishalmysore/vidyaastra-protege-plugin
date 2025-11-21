@@ -62,7 +62,7 @@
 ### Using VidyaAstra Graph
 
 1. Open your ontology in Protégé
-2. Navigate to **Window > Views > Ontology views > VidyaAstra Graph**
+2. Navigate to **Window > Views > Miscellaneous views > VidyaAstra Graph**
 3. The graph displays root classes automatically
 4. **Double-click** any class with **[+]** to expand and see:
    - Subclasses (connected with gray dashed lines)
