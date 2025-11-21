@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?eclipse version="3.0"?>
+
+<plugin name="Vidyaastra Plugin" version="1.0.0">
+   <!-- Menu Action Extension for AI Integration -->
+   <extension id="vidyaastra" point="org.protege.editor.core.application.EditorKitMenuAction">
+      <name value="AI Integration - Send Query to LLM..." />
+      <toolTip value="Query Large Language Model for AI-powered assistance" />
+      <class value="org.vidyaastra.action.VidyaastraAction" />
+      <path value="org.protege.editor.owl.menu.tools/SlotF-Z"></path>
+      <editorKitId value="OWLEditorKit" />
+   </extension>
+
+   <!-- View Tab Extension for VidyaAstra Graph -->
+   <extension id="VidyaastraGraphView" point="org.protege.editor.core.application.ViewComponent">
+      <label value="VidyaAstra Graph"/>
+      <class value="org.vidyaastra.ui.view.VidyaastraGraphView"/>
+      <headerColor value="@org.protege.editor.owl.OWLEditorKit"/>
+      <category value="@org.protege.editor.owl.ui.view.ontology.OWLOntologyViewsCategory"/>
+   </extension>
+</plugin>
+
