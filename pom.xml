@@ -275,50 +275,5 @@
       </plugins>
    </build>
 
-   <!-- Generate source and Javadoc JAR files, and sign artifacts. Required by Sonatype OSSRH for deployment. -->
-   <profiles>
-      <profile>
-         <id>release</id>
-         <activation>
-            <activeByDefault>false</activeByDefault>
-         </activation>
-         <build>
-            <plugins>
-               <plugin>
-                  <groupId>org.apache.maven.plugins</groupId>
-                  <artifactId>maven-source-plugin</artifactId>
-                  <version>3.3.1</version>
-                  <executions>
-                     <execution>
-                        <id>attach-sources</id>
-                        <goals>
-                           <goal>jar</goal>
-                        </goals>
-                     </execution>
-                  </executions>
-               </plugin>
 
-               <plugin>
-                  <groupId>org.apache.maven.plugins</groupId>
-                  <artifactId>maven-javadoc-plugin</artifactId>
-                  <version>3.6.3</version>
-                  <executions>
-                     <execution>
-                        <id>attach-javadocs</id>
-                        <goals>
-                           <goal>jar</goal>
-                        </goals>
-                        <configuration>
-                           <failOnError>false</failOnError>
-                           <quiet>true</quiet>
-                        </configuration>
-                     </execution>
-                  </executions>
-               </plugin>
-
-
-            </plugins>
-         </build>
-      </profile>
-   </profiles>
 </project>
