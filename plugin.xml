@@ -17,5 +17,11 @@
       <class value="org.vidyaastra.ui.view.VidyaastraGraphView"/>
       <headerColor value="@org.protege.editor.owl.OWLEditorKit"/>
    </extension>
+
+   <!-- Preferences Panel Extension for VidyaAstra Settings -->
+   <extension id="VidyaastraPreferences" point="org.protege.editor.core.application.preferences.PreferencesPanel">
+      <label value="VidyaAstra"/>
+      <class value="org.vidyaastra.ui.VidyaastraPreferencesPanel"/>
+   </extension>
 </plugin>
 

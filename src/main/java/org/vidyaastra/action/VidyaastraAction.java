@@ -40,9 +40,7 @@ public class VidyaastraAction extends ProtegeOWLAction
    {
       final OWLOntology currentOntology = getOWLModelManager().getActiveOntology();
       final OWLWorkspace editorWindow = editorKit.getOWLWorkspace();
-      JDialog vidyaastraDialog = AIQueryPanel.createDialog(currentOntology, editorKit, dialogManager);
-      vidyaastraDialog.setLocationRelativeTo(editorWindow);
-      vidyaastraDialog.setVisible(true);
+      AIQueryPanel.showDialog(currentOntology, editorKit);
    }
 
    @Override
