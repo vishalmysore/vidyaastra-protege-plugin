@@ -7,11 +7,6 @@
             <url>https://maven.pkg.github.com/protegeproject/vidyaastra-plugin</url>
         </repository>
     </distributionManagement>
-   <parent>
-      <groupId>org.sonatype.oss</groupId>
-      <artifactId>oss-parent</artifactId>
-      <version>7</version>
-   </parent>
 
    <groupId>edu.stanford.protege</groupId>
    <artifactId>vidyaastra</artifactId>
