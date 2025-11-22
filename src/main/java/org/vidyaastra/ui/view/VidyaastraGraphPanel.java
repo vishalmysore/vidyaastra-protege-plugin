@@ -4,7 +4,11 @@ import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.awt.Paint;
 import java.awt.Shape;
 import java.awt.Stroke;
@@ -17,10 +21,20 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
 import javax.swing.JToolBar;
-import javax.swing.JButton;
+import javax.swing.SwingWorker;
+import javax.swing.border.EmptyBorder;
+
+import org.vidyaastra.OpenAiCaller;
+import org.vidyaastra.ui.VidyaastraPreferences;
 
 import org.protege.editor.owl.model.OWLModelManager;
 import org.semanticweb.owlapi.model.OWLClass;
@@ -28,6 +42,17 @@ import org.semanticweb.owlapi.model.OWLEntity;
 import org.semanticweb.owlapi.model.OWLNamedIndividual;
 import org.semanticweb.owlapi.model.OWLObjectProperty;
 import org.semanticweb.owlapi.model.OWLOntology;
+import org.semanticweb.owlapi.model.OWLClassExpression;
+import org.semanticweb.owlapi.reasoner.OWLReasoner;
+import org.semanticweb.owlapi.reasoner.Node;
+import org.semanticweb.owlapi.reasoner.NodeSet;
+import org.semanticweb.owlapi.util.ShortFormProvider;
+import org.semanticweb.owlapi.util.SimpleShortFormProvider;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.stream.Collectors;
 
 import edu.uci.ics.jung.algorithms.layout.CircleLayout;
 import edu.uci.ics.jung.algorithms.layout.FRLayout;
@@ -50,6 +75,7 @@ import edu.uci.ics.jung.visualization.renderers.Renderer;
 public class VidyaastraGraphPanel extends JPanel
 {
    private static final long serialVersionUID = 1L;
+   private static final Logger logger = LoggerFactory.getLogger(VidyaastraGraphPanel.class);
 
    private OWLModelManager modelManager;
    private Graph<OWLEntity, OWLRelationship> graph;
@@ -59,6 +85,11 @@ public class VidyaastraGraphPanel extends JPanel
    private DefaultModalGraphMouse<OWLEntity, OWLRelationship> graphMouse;
    private Set<OWLEntity> expandedNodes;
    private OWLOntology ontology;
+   
+   // NLP Query components
+   private JTextField queryField;
+   private JTextArea resultsArea;
+   private JButton executeQueryButton;
 
    public VidyaastraGraphPanel(OWLModelManager modelManager)
    {
@@ -69,6 +100,7 @@ public class VidyaastraGraphPanel extends JPanel
       initializeGraph();
       createViewer();
       createToolbar();
+      createQueryPanel();
    }
 
    private void initializeGraph()
@@ -324,7 +356,7 @@ public class VidyaastraGraphPanel extends JPanel
       setupEdgeRenderer();
       setupMouseControl();
 
-      add(new JScrollPane(viewer), BorderLayout.CENTER);
+      // We'll add viewer to a split pane in createQueryPanel()
    }
 
    private void setupNodeRenderer()
@@ -371,7 +403,7 @@ public class VidyaastraGraphPanel extends JPanel
       // Professional gradient-like colors
       viewer.getRenderContext().setVertexFillPaintTransformer(entity -> {
          if (entity.equals(selectedEntity)) {
-            return new Color(255, 215, 0); // Gold for selected
+            return new Color(255, 140, 0); // Bright orange for selected - very visible!
          } else if (entity instanceof OWLClass) {
             return new Color(100, 149, 237); // Cornflower blue - more vibrant
          } else if (entity instanceof OWLObjectProperty) {
@@ -385,7 +417,7 @@ public class VidyaastraGraphPanel extends JPanel
       // Thicker, more visible borders
       viewer.getRenderContext().setVertexDrawPaintTransformer(entity -> {
          if (entity.equals(selectedEntity)) {
-            return new Color(255, 69, 0); // Orange red for selected
+            return new Color(220, 20, 60); // Crimson for selected - bold border!
          }
          return new Color(47, 79, 79); // Dark slate gray
       });
@@ -393,7 +425,7 @@ public class VidyaastraGraphPanel extends JPanel
       // Custom vertex stroke (border thickness)
       viewer.getRenderContext().setVertexStrokeTransformer(entity -> {
          if (entity.equals(selectedEntity)) {
-            return new BasicStroke(3.0f); // Thicker border for selected
+            return new BasicStroke(4.0f); // Much thicker border for selected
          }
          return new BasicStroke(2.0f); // Normal border
       });
@@ -407,7 +439,7 @@ public class VidyaastraGraphPanel extends JPanel
          int fontSize = label.length() > 12 ? 10 : 11;
          
          if (entity.equals(selectedEntity)) {
-            return new Font("SansSerif", Font.BOLD, fontSize + 1);
+            return new Font("SansSerif", Font.BOLD, fontSize + 2); // Bigger and bolder!
          }
          return new Font("SansSerif", Font.BOLD, fontSize);
       });
@@ -566,6 +598,802 @@ public class VidyaastraGraphPanel extends JPanel
       add(toolbar, BorderLayout.NORTH);
    }
 
+   /**
+    * Creates the NLP query panel at the bottom for natural language to SPARQL conversion
+    */
+   private void createQueryPanel()
+   {
+      JPanel queryPanel = new JPanel(new BorderLayout(5, 5));
+      queryPanel.setBorder(BorderFactory.createCompoundBorder(
+         BorderFactory.createTitledBorder("Natural Language Query (NLP → Ontology)"),
+         new EmptyBorder(5, 5, 5, 5)
+      ));
+
+      // Top section: Query input
+      JPanel inputPanel = new JPanel(new BorderLayout(5, 0));
+      
+      queryField = new JTextField();
+      queryField.setFont(new Font("Arial", Font.PLAIN, 12));
+      queryField.setToolTipText("Enter your query in natural language (e.g., 'Tell me about Arjuna')");
+      
+      executeQueryButton = new JButton("Execute Query");
+      executeQueryButton.setFont(new Font("Arial", Font.BOLD, 11));
+      executeQueryButton.addActionListener(e -> executeNLPQuery());
+      
+      inputPanel.add(new JLabel("Query: "), BorderLayout.WEST);
+      inputPanel.add(queryField, BorderLayout.CENTER);
+      inputPanel.add(executeQueryButton, BorderLayout.EAST);
+      
+      queryPanel.add(inputPanel, BorderLayout.NORTH);
+
+      // Bottom section: Results display
+      resultsArea = new JTextArea(6, 60);
+      resultsArea.setEditable(false);
+      resultsArea.setFont(new Font("Monospaced", Font.PLAIN, 11));
+      resultsArea.setBackground(new Color(245, 245, 245));
+      resultsArea.setLineWrap(true);
+      resultsArea.setWrapStyleWord(true);
+      resultsArea.setText("💡 Try asking: \"Tell me about Arjuna\" or \"List all warriors\"");
+      
+      JScrollPane resultsScroll = new JScrollPane(resultsArea);
+      resultsScroll.setPreferredSize(new Dimension(0, 120));
+      queryPanel.add(resultsScroll, BorderLayout.CENTER);
+
+      // Create split pane with graph viewer on top and query panel on bottom
+      JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+      
+      // Create scroll pane for viewer with both scrollbars
+      JScrollPane viewerScroll = new JScrollPane(viewer);
+      viewerScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+      viewerScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+      
+      splitPane.setTopComponent(viewerScroll);
+      splitPane.setBottomComponent(queryPanel);
+      splitPane.setDividerLocation(0.7); // 70% for graph, 30% for query
+      splitPane.setResizeWeight(0.7); // Graph gets 70% of extra space
+      splitPane.setOneTouchExpandable(true); // Add expand/collapse arrows
+      splitPane.setDividerSize(8);
+      
+      add(splitPane, BorderLayout.CENTER);
+   }
+
+   /**
+    * Executes NLP query: converts natural language to SPARQL using OpenAI, then runs it
+    */
+   private void executeNLPQuery()
+   {
+      String nlQuery = queryField.getText().trim();
+      
+      if (nlQuery.isEmpty()) {
+         resultsArea.setText("❌ Please enter a query.");
+         return;
+      }
+
+      // Check OpenAI configuration
+      if (!VidyaastraPreferences.isOpenAiConfigured()) {
+         resultsArea.setText("❌ OpenAI not configured!\n\n" +
+                           "Please configure OpenAI settings in Tools → AI Integration first.\n" +
+                           "You need to set:\n" +
+                           "  • Base URL (e.g., https://api.openai.com/v1)\n" +
+                           "  • API Key\n" +
+                           "  • Model (e.g., gpt-4o-mini)");
+         return;
+      }
+
+      executeQueryButton.setEnabled(false);
+      resultsArea.setText("⏳ Analyzing query...\n\nNatural Language: " + nlQuery);
+
+      // Use SwingWorker for background processing
+      SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
+         private String targetEntity = "";
+         private String queryType = "";
+         
+         @Override
+         protected String doInBackground() throws Exception {
+            // Get OpenAI configuration
+            String baseUrl = VidyaastraPreferences.getOpenAiBaseUrl();
+            String apiKey = VidyaastraPreferences.getOpenAiApiKey();
+            String model = VidyaastraPreferences.getOpenAiModel();
+
+            OpenAiCaller caller = new OpenAiCaller(apiKey, model, baseUrl);
+
+            // Build system prompt
+            String systemPrompt = buildSparqlSystemPrompt();
+            
+            logger.info("=== NLP Query Execution ===");
+            logger.info("User Query: {}", nlQuery);
+            logger.info("System Prompt Length: {} characters", systemPrompt.length());
+
+            // Call OpenAI to understand the query
+            String response = caller.generateCompletion(systemPrompt, nlQuery, 0.3);
+            
+            logger.info("Raw LLM Response: {}", response);
+            
+            // Replace escaped newlines with actual newlines
+            response = response.replace("\\n", "\n");
+            
+            logger.info("After newline replacement: {}", response);
+            
+            // Parse the response to extract query type and target
+            String[] lines = response.split("\n");
+            logger.info("Split into {} lines", lines.length);
+            
+            for (String line : lines) {
+               String trimmedLine = line.trim();
+               logger.info("Processing line: '{}'", trimmedLine);
+               
+               if (trimmedLine.startsWith("QUERY_TYPE:")) {
+                  queryType = trimmedLine.substring("QUERY_TYPE:".length()).trim();
+                  logger.info("Extracted QUERY_TYPE: {}", queryType);
+               } else if (trimmedLine.startsWith("TARGET:")) {
+                  targetEntity = trimmedLine.substring("TARGET:".length()).trim();
+                  logger.info("Extracted TARGET: {}", targetEntity);
+               }
+            }
+            
+            logger.info("Final - Query Type: '{}', Target Entity: '{}'", queryType, targetEntity);
+
+            // Execute query on the actual ontology graph
+            return executeQueryOnGraph(queryType, targetEntity);
+         }
+
+         @Override
+         protected void done() {
+            try {
+               String results = get();
+               
+               // Highlight the entity in the graph
+               highlightEntityInGraph(targetEntity);
+               
+               resultsArea.setText("✅ Query Results from Ontology\n\n" +
+                                 "Natural Language: " + nlQuery + "\n\n" +
+                                 "Query Type: " + queryType + "\n" +
+                                 "Target: " + targetEntity + "\n\n" +
+                                 results);
+            } catch (Exception e) {
+               resultsArea.setText("❌ Error executing query:\n\n" + e.getMessage() + "\n\n" +
+                                 "Please check:\n" +
+                                 "  ✗ Your OpenAI configuration in Tools → AI Integration\n" +
+                                 "  ✗ Your internet connection\n" +
+                                 "  ✗ The query syntax");
+               e.printStackTrace();
+            } finally {
+               executeQueryButton.setEnabled(true);
+            }
+         }
+      };
+
+      worker.execute();
+   }
+
+   /**
+    * Builds the system prompt for OpenAI to generate simple queries
+    */
+   private String buildSparqlSystemPrompt()
+   {
+      StringBuilder prompt = new StringBuilder();
+      prompt.append("You are an ontology query analyzer. Parse the user's natural language question ");
+      prompt.append("and identify ONLY what they're asking about.\n\n");
+      
+      prompt.append("DO NOT answer the question yourself. Just identify:\n");
+      prompt.append("1. What type of query it is\n");
+      prompt.append("2. What entity/class they're asking about\n\n");
+      
+      if (ontology != null) {
+         prompt.append("Current Ontology: ").append(ontology.getOntologyID().getOntologyIRI().orNull()).append("\n\n");
+         
+         // Add ontology context
+         prompt.append("Available Classes:\n");
+         ontology.getClassesInSignature().stream()
+            .filter(cls -> !cls.isOWLThing() && !cls.isOWLNothing())
+            .limit(20)
+            .forEach(cls -> prompt.append("  - ").append(cls.getIRI().getShortForm()).append("\n"));
+         
+         prompt.append("\nAvailable Object Properties:\n");
+         ontology.getObjectPropertiesInSignature().stream()
+            .limit(10)
+            .forEach(prop -> prompt.append("  - ").append(prop.getIRI().getShortForm()).append("\n"));
+         
+         prompt.append("\nAvailable Individuals:\n");
+         ontology.getIndividualsInSignature().stream()
+            .limit(20)
+            .forEach(ind -> prompt.append("  - ").append(ind.getIRI().getShortForm()).append("\n"));
+      }
+      
+      prompt.append("\nYou MUST respond ONLY in this exact format:\n");
+      prompt.append("QUERY_TYPE: [individual|instances|classes|properties|relationships]\n");
+      prompt.append("TARGET: [exact entity name from the ontology]\n\n");
+      
+      prompt.append("Examples:\n");
+      prompt.append("User: 'Tell me about Arjuna' → QUERY_TYPE: individual\\nTARGET: Arjuna\n");
+      prompt.append("User: 'Who is Krishna?' → QUERY_TYPE: individual\\nTARGET: Krishna\n");
+      prompt.append("User: 'List all deities' → QUERY_TYPE: instances\\nTARGET: Deity\n");
+      prompt.append("User: 'Show me Arjuna's relationships' → QUERY_TYPE: relationships\\nTARGET: Arjuna\n");
+      
+      return prompt.toString();
+   }
+
+   /**
+    * Executes query on the actual ontology graph
+    */
+   private String executeQueryOnGraph(String queryType, String target)
+   {
+      try {
+         StringBuilder results = new StringBuilder();
+         
+         if (queryType == null || target == null || target.isEmpty()) {
+            return "⚠️ Could not parse query. Please try rephrasing.";
+         }
+         
+         // Execute based on query type and build answer from ontology
+         switch (queryType.toLowerCase()) {
+            case "instances":
+               results.append(findInstancesWithDetails(target));
+               break;
+            case "classes":
+               results.append(findClassesWithDetails(target));
+               break;
+            case "properties":
+               results.append(findPropertiesWithDetails(target));
+               break;
+            case "relationships":
+               results.append(findRelationshipsWithDetails(target));
+               break;
+            case "individual":
+            case "entity":
+               results.append(findIndividualDetails(target));
+               break;
+            default:
+               results.append("⚠️ Unknown query type: " + queryType);
+         }
+         
+         return results.toString();
+         
+      } catch (Exception e) {
+         return "❌ Error: " + e.getMessage();
+      }
+   }
+
+   /**
+    * Highlights the target entity in the graph
+    */
+   private void highlightEntityInGraph(String entityName)
+   {
+      if (entityName == null || entityName.isEmpty()) {
+         logger.warn("highlightEntityInGraph called with null or empty entityName");
+         return;
+      }
+      
+      logger.info("=== Highlighting Entity in Graph ===");
+      logger.info("Searching for entity: '{}'", entityName);
+      
+      // Find the entity in the graph
+      OWLEntity targetEntity = null;
+      
+      // Search in individuals first
+      int individualCount = 0;
+      for (OWLNamedIndividual ind : ontology.getIndividualsInSignature()) {
+         individualCount++;
+         if (ind.getIRI().getShortForm().equalsIgnoreCase(entityName)) {
+            targetEntity = ind;
+            logger.info("Found as INDIVIDUAL: {}", ind.getIRI().getShortForm());
+            break;
+         }
+      }
+      logger.info("Searched {} individuals", individualCount);
+      
+      // If not found, search in classes
+      if (targetEntity == null) {
+         int classCount = 0;
+         for (OWLClass cls : ontology.getClassesInSignature()) {
+            classCount++;
+            if (cls.getIRI().getShortForm().equalsIgnoreCase(entityName)) {
+               targetEntity = cls;
+               logger.info("Found as CLASS: {}", cls.getIRI().getShortForm());
+               break;
+            }
+         }
+         logger.info("Searched {} classes", classCount);
+      }
+      
+      // If not found, search in properties
+      if (targetEntity == null) {
+         int propCount = 0;
+         for (OWLObjectProperty prop : ontology.getObjectPropertiesInSignature()) {
+            propCount++;
+            if (prop.getIRI().getShortForm().equalsIgnoreCase(entityName)) {
+               targetEntity = prop;
+               logger.info("Found as PROPERTY: {}", prop.getIRI().getShortForm());
+               break;
+            }
+         }
+         logger.info("Searched {} properties", propCount);
+      }
+      
+      // Highlight the entity if found
+      if (targetEntity != null) {
+         final OWLEntity entity = targetEntity;
+         
+         logger.info("Entity found! Type: {}", entity.getClass().getSimpleName());
+         
+         // Add to graph if not already present
+         if (!graph.containsVertex(entity)) {
+            graph.addVertex(entity);
+            logger.info("Added entity to graph (was not present)");
+         } else {
+            logger.info("Entity already in graph");
+         }
+         
+         // Expand the entity to show its relationships
+         expandEntityWithRelationships(entity);
+         
+         // Set as selected entity (this will trigger visual highlighting)
+         selectedEntity = entity;
+         logger.info("Set as selected entity");
+         
+         // Center the view on this entity
+         centerViewOnEntity(entity);
+         
+         // Refresh the viewer to show the highlighting
+         viewer.repaint();
+         logger.info("Triggered viewer repaint");
+      } else {
+         logger.warn("Entity '{}' NOT FOUND in ontology!", entityName);
+      }
+   }
+
+   /**
+    * Expands an entity to show its relationships in the graph
+    */
+   private void expandEntityWithRelationships(OWLEntity entity)
+   {
+      logger.info("Expanding entity to show relationships: {}", entity.getIRI().getShortForm());
+      
+      // If it's an individual, show its class and relationships
+      if (entity instanceof OWLNamedIndividual) {
+         OWLNamedIndividual individual = (OWLNamedIndividual) entity;
+         
+         // Add its classes
+         for (var axiom : ontology.getClassAssertionAxioms(individual)) {
+            if (!axiom.getClassExpression().isAnonymous()) {
+               OWLClass cls = axiom.getClassExpression().asOWLClass();
+               if (!graph.containsVertex(cls)) {
+                  graph.addVertex(cls);
+                  logger.info("Added class: {}", cls.getIRI().getShortForm());
+               }
+               if (!graph.containsEdge(new OWLRelationship(individual, cls, "type"))) {
+                  graph.addEdge(new OWLRelationship(individual, cls, "type"), individual, cls);
+                  logger.info("Added type edge to: {}", cls.getIRI().getShortForm());
+               }
+            }
+         }
+         
+         // Add related individuals via object properties
+         int relationCount = 0;
+         for (var axiom : ontology.getObjectPropertyAssertionAxioms(individual)) {
+            OWLObjectProperty property = axiom.getProperty().asOWLObjectProperty();
+            OWLNamedIndividual target = axiom.getObject().asOWLNamedIndividual();
+            
+            if (!graph.containsVertex(target)) {
+               graph.addVertex(target);
+               logger.info("Added related individual: {}", target.getIRI().getShortForm());
+            }
+            
+            String propertyName = property.getIRI().getShortForm();
+            OWLRelationship edge = new OWLRelationship(individual, target, propertyName);
+            if (!graph.containsEdge(edge)) {
+               graph.addEdge(edge, individual, target);
+               logger.info("Added relationship: {} --{}-> {}", 
+                  individual.getIRI().getShortForm(), propertyName, target.getIRI().getShortForm());
+               relationCount++;
+            }
+         }
+         logger.info("Added {} relationships", relationCount);
+         
+         // Mark as expanded
+         expandedNodes.add(entity);
+      }
+      // If it's a class, show instances and subclasses
+      else if (entity instanceof OWLClass) {
+         expandedNodes.add(entity);
+         addChildrenToGraph(entity);
+         logger.info("Expanded class to show subclasses and instances");
+      }
+      
+      // Refresh layout
+      currentLayout.initialize();
+   }
+
+   /**
+    * Centers the view on the specified entity
+    */
+   private void centerViewOnEntity(OWLEntity entity)
+   {
+      try {
+         // Get the entity's position in the layout
+         java.awt.geom.Point2D entityPos = currentLayout.apply(entity);
+         
+         if (entityPos != null) {
+            logger.info("Entity position: ({}, {})", entityPos.getX(), entityPos.getY());
+            
+            // Get the center of the viewer
+            Dimension viewerSize = viewer.getSize();
+            double centerX = viewerSize.width / 2.0;
+            double centerY = viewerSize.height / 2.0;
+            
+            // Calculate the offset needed to center the entity
+            double dx = centerX - entityPos.getX();
+            double dy = centerY - entityPos.getY();
+            
+            logger.info("Centering entity - offset: ({}, {})", dx, dy);
+            
+            // Get the current render context transform and update it
+            viewer.getRenderContext().getMultiLayerTransformer()
+                  .getTransformer(edu.uci.ics.jung.visualization.Layer.LAYOUT)
+                  .translate(dx, dy);
+            
+            logger.info("View centered on entity");
+         } else {
+            logger.warn("Could not get entity position for centering");
+         }
+      } catch (Exception e) {
+         logger.error("Error centering view on entity", e);
+      }
+   }
+
+   /**
+    * Finds an individual and returns detailed information
+    */
+   private String findIndividualDetails(String individualName)
+   {
+      StringBuilder result = new StringBuilder();
+      
+      // Find the individual
+      OWLNamedIndividual targetInd = ontology.getIndividualsInSignature().stream()
+         .filter(ind -> ind.getIRI().getShortForm().equalsIgnoreCase(individualName))
+         .findFirst().orElse(null);
+      
+      if (targetInd == null) {
+         return "❌ Individual '" + individualName + "' not found in ontology.";
+      }
+      
+      result.append("📋 Individual: ").append(individualName).append("\n\n");
+      
+      // Get types (classes)
+      result.append("🏷️ Types:\n");
+      int typeCount = 0;
+      for (var axiom : ontology.getClassAssertionAxioms(targetInd)) {
+         if (!axiom.getClassExpression().isAnonymous()) {
+            typeCount++;
+            OWLClass cls = axiom.getClassExpression().asOWLClass();
+            result.append("  • ").append(cls.getIRI().getShortForm()).append("\n");
+         }
+      }
+      if (typeCount == 0) {
+         result.append("  (No types found)\n");
+      }
+      
+      // Get relationships
+      result.append("\n🔗 Relationships:\n");
+      int relCount = 0;
+      for (var axiom : ontology.getObjectPropertyAssertionAxioms(targetInd)) {
+         relCount++;
+         String property = axiom.getProperty().asOWLObjectProperty().getIRI().getShortForm();
+         String object = axiom.getObject().asOWLNamedIndividual().getIRI().getShortForm();
+         result.append("  • ").append(property).append(" → ").append(object).append("\n");
+      }
+      if (relCount == 0) {
+         result.append("  (No relationships found)\n");
+      }
+      
+      // Get data properties
+      result.append("\n📊 Data Properties:\n");
+      int dataCount = 0;
+      for (var axiom : ontology.getDataPropertyAssertionAxioms(targetInd)) {
+         dataCount++;
+         String property = axiom.getProperty().asOWLDataProperty().getIRI().getShortForm();
+         String value = axiom.getObject().getLiteral();
+         result.append("  • ").append(property).append(" = ").append(value).append("\n");
+      }
+      if (dataCount == 0) {
+         result.append("  (No data properties found)\n");
+      }
+      
+      return result.toString();
+   }
+
+   private String findInstancesWithDetails(String className)
+   {
+      StringBuilder result = new StringBuilder();
+      result.append("📦 Instances of '").append(className).append("':\n\n");
+      
+      OWLClass targetClass = ontology.getClassesInSignature().stream()
+         .filter(cls -> cls.getIRI().getShortForm().equalsIgnoreCase(className))
+         .findFirst().orElse(null);
+      
+      if (targetClass != null) {
+         Set<OWLNamedIndividual> instances = ontology.getClassAssertionAxioms(targetClass).stream()
+            .filter(ax -> ax.getIndividual().isNamed())
+            .map(ax -> ax.getIndividual().asOWLNamedIndividual())
+            .collect(Collectors.toSet());
+         
+         if (instances.isEmpty()) {
+            result.append("  (No instances found)\n");
+         } else {
+            for (OWLNamedIndividual ind : instances) {
+               result.append("  • ").append(ind.getIRI().getShortForm()).append("\n");
+            }
+            result.append("\nTotal: ").append(instances.size()).append(" instance(s)\n");
+         }
+      } else {
+         result.append("❌ Class not found: ").append(className).append("\n");
+      }
+      
+      return result.toString();
+   }
+
+   private String findClassesWithDetails(String pattern)
+   {
+      StringBuilder result = new StringBuilder();
+      result.append("🗂️ Classes matching '").append(pattern).append("':\n\n");
+      
+      Set<OWLClass> matchingClasses = ontology.getClassesInSignature().stream()
+         .filter(cls -> !cls.isOWLThing() && !cls.isOWLNothing())
+         .filter(cls -> cls.getIRI().getShortForm().toLowerCase().contains(pattern.toLowerCase()))
+         .collect(Collectors.toSet());
+      
+      if (matchingClasses.isEmpty()) {
+         result.append("  (No classes found)\n");
+      } else {
+         for (OWLClass cls : matchingClasses) {
+            result.append("  • ").append(cls.getIRI().getShortForm()).append("\n");
+         }
+         result.append("\nTotal: ").append(matchingClasses.size()).append(" class(es)\n");
+      }
+      
+      return result.toString();
+   }
+
+   private String findPropertiesWithDetails(String pattern)
+   {
+      StringBuilder result = new StringBuilder();
+      result.append("🔗 Object Properties matching '").append(pattern).append("':\n\n");
+      
+      Set<OWLObjectProperty> matchingProps = ontology.getObjectPropertiesInSignature().stream()
+         .filter(prop -> pattern.isEmpty() || prop.getIRI().getShortForm().toLowerCase().contains(pattern.toLowerCase()))
+         .collect(Collectors.toSet());
+      
+      if (matchingProps.isEmpty()) {
+         result.append("  (No properties found)\n");
+      } else {
+         for (OWLObjectProperty prop : matchingProps) {
+            result.append("  • ").append(prop.getIRI().getShortForm()).append("\n");
+         }
+         result.append("\nTotal: ").append(matchingProps.size()).append(" propert(y/ies)\n");
+      }
+      
+      return result.toString();
+   }
+
+   private String findRelationshipsWithDetails(String individualName)
+   {
+      StringBuilder result = new StringBuilder();
+      result.append("🔗 Relationships for '").append(individualName).append("':\n\n");
+      
+      OWLNamedIndividual targetInd = ontology.getIndividualsInSignature().stream()
+         .filter(ind -> ind.getIRI().getShortForm().equalsIgnoreCase(individualName))
+         .findFirst().orElse(null);
+      
+      if (targetInd != null) {
+         int count = 0;
+         for (var axiom : ontology.getObjectPropertyAssertionAxioms(targetInd)) {
+            count++;
+            String property = axiom.getProperty().asOWLObjectProperty().getIRI().getShortForm();
+            String object = axiom.getObject().asOWLNamedIndividual().getIRI().getShortForm();
+            result.append("  • ").append(property).append(" → ").append(object).append("\n");
+         }
+         
+         if (count == 0) {
+            result.append("  (No relationships found)\n");
+         } else {
+            result.append("\nTotal: ").append(count).append(" relationship(s)\n");
+         }
+      } else {
+         result.append("❌ Individual not found: ").append(individualName).append("\n");
+      }
+      
+      return result.toString();
+   }
+
+   /**
+    * Extracts query information from OpenAI response
+    */
+   private String extractSparqlQuery(String response)
+   {
+      // For the simplified approach, we just return the response
+      return response != null ? response.trim() : "";
+   }
+
+   /**
+    * Executes query on the ontology using OWL API
+    */
+   private String executeSparqlQuery(String aiResponse)
+   {
+      try {
+         StringBuilder results = new StringBuilder();
+         results.append("✅ Query Processed!\n\n");
+         results.append("📊 Results:\n");
+         results.append("─────────────────────────────────────\n\n");
+         
+         // Parse AI response to detect query type
+         String queryType = extractQueryType(aiResponse);
+         String target = extractTarget(aiResponse);
+         
+         if (queryType != null && target != null) {
+            // Execute based on query type
+            switch (queryType.toLowerCase()) {
+               case "instances":
+                  results.append(findInstances(target));
+                  break;
+               case "classes":
+                  results.append(findClasses(target));
+                  break;
+               case "properties":
+                  results.append(findProperties(target));
+                  break;
+               case "relationships":
+                  results.append(findRelationships(target));
+                  break;
+               default:
+                  results.append(aiResponse);
+            }
+         } else {
+            // Just show AI's response
+            results.append(aiResponse);
+         }
+         
+         results.append("\n\n─────────────────────────────────────\n");
+         return results.toString();
+         
+      } catch (Exception e) {
+         return "❌ Error: " + e.getMessage();
+      }
+   }
+
+   private String extractQueryType(String response) {
+      if (response.contains("QUERY_TYPE:")) {
+         String[] lines = response.split("\n");
+         for (String line : lines) {
+            if (line.startsWith("QUERY_TYPE:")) {
+               return line.substring(11).trim();
+            }
+         }
+      }
+      return null;
+   }
+
+   private String extractTarget(String response) {
+      if (response.contains("TARGET:")) {
+         String[] lines = response.split("\n");
+         for (String line : lines) {
+            if (line.startsWith("TARGET:")) {
+               return line.substring(7).trim();
+            }
+         }
+      }
+      return null;
+   }
+
+   private String findInstances(String className) {
+      StringBuilder result = new StringBuilder();
+      result.append("Instances of ").append(className).append(":\n\n");
+      
+      // Find the class
+      OWLClass targetClass = ontology.getClassesInSignature().stream()
+         .filter(cls -> cls.getIRI().getShortForm().equalsIgnoreCase(className))
+         .findFirst().orElse(null);
+      
+      if (targetClass != null) {
+         Set<OWLNamedIndividual> instances = ontology.getClassAssertionAxioms(targetClass).stream()
+            .filter(ax -> ax.getIndividual().isNamed())
+            .map(ax -> ax.getIndividual().asOWLNamedIndividual())
+            .collect(Collectors.toSet());
+         
+         int count = 0;
+         for (OWLNamedIndividual ind : instances) {
+            count++;
+            result.append("  ").append(count).append(". ").append(ind.getIRI().getShortForm()).append("\n");
+         }
+         
+         if (count == 0) {
+            result.append("  (No instances found)\n");
+         } else {
+            result.append("\nTotal: ").append(count).append(" instance(s)\n");
+         }
+      } else {
+         result.append("  Class not found: ").append(className).append("\n");
+      }
+      
+      return result.toString();
+   }
+
+   private String findClasses(String pattern) {
+      StringBuilder result = new StringBuilder();
+      result.append("Classes matching '").append(pattern).append("':\n\n");
+      
+      int count = 0;
+      for (OWLClass cls : ontology.getClassesInSignature()) {
+         if (!cls.isOWLThing() && !cls.isOWLNothing()) {
+            String name = cls.getIRI().getShortForm();
+            if (name.toLowerCase().contains(pattern.toLowerCase())) {
+               count++;
+               result.append("  ").append(count).append(". ").append(name).append("\n");
+            }
+         }
+      }
+      
+      if (count == 0) {
+         result.append("  (No classes found)\n");
+      } else {
+         result.append("\nTotal: ").append(count).append(" class(es)\n");
+      }
+      
+      return result.toString();
+   }
+
+   private String findProperties(String pattern) {
+      StringBuilder result = new StringBuilder();
+      result.append("Object Properties matching '").append(pattern).append("':\n\n");
+      
+      int count = 0;
+      for (OWLObjectProperty prop : ontology.getObjectPropertiesInSignature()) {
+         String name = prop.getIRI().getShortForm();
+         if (pattern.isEmpty() || name.toLowerCase().contains(pattern.toLowerCase())) {
+            count++;
+            result.append("  ").append(count).append(". ").append(name).append("\n");
+         }
+      }
+      
+      if (count == 0) {
+         result.append("  (No properties found)\n");
+      } else {
+         result.append("\nTotal: ").append(count).append(" propert(y/ies)\n");
+      }
+      
+      return result.toString();
+   }
+
+   private String findRelationships(String individualName) {
+      StringBuilder result = new StringBuilder();
+      result.append("Relationships for '").append(individualName).append("':\n\n");
+      
+      // Find the individual
+      OWLNamedIndividual targetInd = ontology.getIndividualsInSignature().stream()
+         .filter(ind -> ind.getIRI().getShortForm().equalsIgnoreCase(individualName))
+         .findFirst().orElse(null);
+      
+      if (targetInd != null) {
+         int count = 0;
+         for (var axiom : ontology.getObjectPropertyAssertionAxioms(targetInd)) {
+            count++;
+            String property = axiom.getProperty().asOWLObjectProperty().getIRI().getShortForm();
+            String object = axiom.getObject().asOWLNamedIndividual().getIRI().getShortForm();
+            result.append("  ").append(count).append(". ").append(property)
+                  .append(" → ").append(object).append("\n");
+         }
+         
+         if (count == 0) {
+            result.append("  (No relationships found)\n");
+         } else {
+            result.append("\nTotal: ").append(count).append(" relationship(s)\n");
+         }
+      } else {
+         result.append("  Individual not found: ").append(individualName).append("\n");
+      }
+      
+      return result.toString();
+   }
+
    private void changeLayout(Layout<OWLEntity, OWLRelationship> newLayout)
    {
       Dimension size = viewer.getSize();
@@ -586,17 +1414,27 @@ public class VidyaastraGraphPanel extends JPanel
 
    public void refreshGraph()
    {
-      graph.getVertices().clear();
-      graph.getEdges().clear();
+      // Create a new graph instead of trying to clear the unmodifiable collections
+      graph = new DirectedSparseGraph<>();
+      expandedNodes.clear();
+      selectedEntity = null;
+      
+      // Rebuild from ontology
       buildGraphFromOntology();
       
-      // Reinitialize the layout to properly position nodes
+      // Update the layout with the new graph
+      currentLayout = new FRLayout<>(graph);
       Dimension size = viewer.getSize();
       if (size.width == 0 || size.height == 0) {
          size = new Dimension(800, 600);
       }
       currentLayout.setSize(size);
-      currentLayout.initialize();
+      
+      // Update the viewer with the new layout
+      viewer.setGraphLayout(currentLayout);
+      
+      logger.info("Graph refreshed - {} vertices, {} edges", 
+         graph.getVertexCount(), graph.getEdgeCount());
       
       viewer.repaint();
    }
