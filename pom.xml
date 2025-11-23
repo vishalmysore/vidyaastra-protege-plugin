@@ -4,7 +4,7 @@
         <repository>
             <id>github</id>
             <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/protegeproject/vidyaastra-plugin</url>
+            <url>https://maven.pkg.github.com/vishalmysore/vidyaastra-protege-plugin</url>
         </repository>
     </distributionManagement>
 
@@ -15,7 +15,7 @@
 
    <name>Vidyaastra Protege 5.6.4+ Plugin</name>
    <description>AI Integration plugin for Desktop Protege 5.0+</description>
-   <url>https://github.com/protegeproject/vidyaastra-plugin/wiki</url>
+   <url>https://github.com/vishalmysore/vidyaastra-protege-plugin/wiki</url>
    <licenses>
       <license>
          <name>GNU Lesser General Public License</name>
@@ -24,9 +24,9 @@
    </licenses>
 
    <scm>
-     <connection>scm:git:git@github.com:protegeproject/vidyaastra-plugin.git</connection>
-     <developerConnection>scm:git:git@github.com:protegeproject/vidyaastra-plugin.git</developerConnection>
-     <url>https://github.com/protegeproject/vidyaastra-plugin</url>
+     <connection>scm:git:git@github.com:vishalmysore/vidyaastra-protege-plugin.git</connection>
+     <developerConnection>scm:git:git@github.com:vishalmysore/vidyaastra-protege-plugin.git</developerConnection>
+     <url>https://github.com/vishalmysore/vidyaastra-protege-plugin</url>
      <tag>HEAD</tag>
     </scm>
 
