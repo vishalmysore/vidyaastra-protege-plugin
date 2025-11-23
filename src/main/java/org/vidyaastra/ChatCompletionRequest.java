@@ -2,7 +2,7 @@ package org.vidyaastra;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
+// Assuming Message class is defined elsewhere with 'role' and 'content' fields
 public class ChatCompletionRequest {
 
     public final String model;
