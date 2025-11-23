@@ -86,10 +86,29 @@ public class ChatCompletionResponse {
         for (int i = start; i < json.length(); i++) {
             char c = json.charAt(i);
             if (escaped) {
-                if (c == 'n') sb.append('\n');
-                else if (c == 'r') sb.append('\r');
-                else if (c == 't') sb.append('\t');
-                else sb.append(c);
+                if (c == 'n') {
+                    sb.append('\n');
+                } else if (c == 'r') {
+                    sb.append('\r');
+                } else if (c == 't') {
+                    sb.append('\t');
+                } else if (c == 'u') {
+                    // Handle Unicode escape sequences like \u003c
+                    if (i + 4 < json.length()) {
+                        try {
+                            String hex = json.substring(i + 1, i + 5);
+                            int codePoint = Integer.parseInt(hex, 16);
+                            sb.append((char) codePoint);
+                            i += 4; // Skip the next 4 hex digits
+                        } catch (NumberFormatException e) {
+                            sb.append(c); // If parsing fails, just append the character
+                        }
+                    } else {
+                        sb.append(c);
+                    }
+                } else {
+                    sb.append(c);
+                }
                 escaped = false;
             } else if (c == '\\') {
                 escaped = true;

@@ -7,13 +7,32 @@
 ## Features
 
 ### 🤖 AI Integration
-**Query your ontology using natural language powered by Large Language Models**
+**Three powerful AI-powered modes for ontology engineering**
 
+#### 1. Basic Query Mode
 - **Interactive AI Query Interface**: Ask questions about your ontology in plain English
 - **Context-Aware Responses**: The AI understands your current ontology context
-- **LLM Integration Ready**: Extensible architecture supports OpenAI, Azure OpenAI, and custom endpoints
-- **Clean, Intuitive UI**: Separate query input and response display areas for easy interaction
-- **Accessible from Tools Menu**: Quick access via **Tools > AI Integration - Send Query to LLM...**
+- **Test & Explore**: Perfect for testing basic functionality and exploring ontology structure
+
+#### 2. Create New Ontology Mode ✨ NEW!
+- **Natural Language Ontology Generation**: Describe an ontology in plain English
+- **Complete OWL/RDF XML Output**: LLM generates valid, ready-to-use ontology files
+- **Save & Load**: Save generated ontologies and optionally load them directly into Protégé
+- **Rapid Prototyping**: Quickly create ontology scaffolds for your projects
+
+#### 3. Modify Ontology Mode ✨ NEW!
+- **AI-Guided Modifications**: Describe changes in natural language
+- **Intelligent Analysis**: AI analyzes your current ontology structure
+- **Automatic Application**: Changes are applied directly using OWL API
+- **Comprehensive Operations**: Add/remove classes, properties, axioms, domains, ranges, and more
+
+**Common Features Across All Modes:**
+- **LLM Integration Ready**: Supports OpenAI, Azure OpenAI, and custom endpoints
+- **Clean, Intuitive UI**: Radio buttons to switch modes, with dynamic labels
+- **Configuration Management**: Save API settings for reuse
+- **Accessible from Tools Menu**: **Tools > AI Integration - Send Query to LLM...**
+
+📖 **See [FEATURE_GUIDE.md](FEATURE_GUIDE.md) for detailed usage instructions and examples**
 
 ### 📊 VidyaAstra Graph - Interactive Ontology Visualization
 **Explore your ontology structure through powerful, interactive graph visualization**
@@ -79,11 +98,38 @@
 
 ### Using AI Integration
 
-1. Open your ontology in Protégé
+1. Open your ontology in Protégé (or start without one for creating new ontologies)
 2. Navigate to **Tools > AI Integration - Send Query to LLM...**
-3. Enter your query (e.g., "Explain the class hierarchy" or "What properties does Person have?")
-4. Click **Send Query**
-5. View AI-generated responses in the panel below
+3. **Configure OpenAI settings** (one-time setup):
+   - Base URL: `https://api.openai.com/v1`
+   - API Key: Your OpenAI API key
+   - Model: `gpt-4o-mini` or `gpt-4o`
+   - Click **Save Config**
+4. **Select your operation mode**:
+   - **Basic Query**: Ask questions about your ontology
+   - **Create New Ontology**: Generate a new ontology from description
+   - **Modify Ontology**: Apply changes to the current ontology
+5. Enter your request in the text area
+6. Click the action button and view results
+
+**Example - Create New Ontology:**
+```
+Create a simple university ontology with:
+- Classes: University, Department, Professor, Student, Course
+- Object properties: teaches, enrollsIn, belongsTo
+- Data properties: name, email, studentID
+```
+
+**Example - Modify Ontology:**
+```
+Add a new class "GraduateStudent" as a subclass of Student
+Add a data property "thesisTitle" with range string
+```
+
+**Example - Basic Query:**
+```
+List all the object properties and their domains and ranges
+```
 
 ## Technology Stack
 
