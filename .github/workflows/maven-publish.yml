@@ -26,5 +26,5 @@ jobs:
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./target/vidyaastra-1.0.0.jar
-          asset_name: vidyaastra-1.0.0.jar
+          asset_name: vidyaastra-1.0.1.jar
           asset_content_type: application/java-archive
