@@ -10,7 +10,7 @@
 
    <groupId>edu.stanford.protege</groupId>
    <artifactId>vidyaastra</artifactId>
-   <version>1.0.0</version>
+   <version>1.0.1</version>
    <packaging>bundle</packaging>
 
    <name>Vidyaastra Protege 5.6.4+ Plugin</name>

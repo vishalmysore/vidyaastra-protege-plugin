@@ -42,17 +42,22 @@ import org.semanticweb.owlapi.model.OWLEntity;
 import org.semanticweb.owlapi.model.OWLNamedIndividual;
 import org.semanticweb.owlapi.model.OWLObjectProperty;
 import org.semanticweb.owlapi.model.OWLOntology;
+import org.semanticweb.owlapi.model.OWLOntologyManager;
+import org.semanticweb.owlapi.model.OWLOntologyStorageException;
 import org.semanticweb.owlapi.model.OWLClassExpression;
 import org.semanticweb.owlapi.reasoner.OWLReasoner;
 import org.semanticweb.owlapi.reasoner.Node;
 import org.semanticweb.owlapi.reasoner.NodeSet;
 import org.semanticweb.owlapi.util.ShortFormProvider;
 import org.semanticweb.owlapi.util.SimpleShortFormProvider;
+import org.semanticweb.owlapi.io.StringDocumentTarget;
+import org.semanticweb.owlapi.formats.FunctionalSyntaxDocumentFormat;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.stream.Collectors;
+import java.io.StringWriter;
 
 import edu.uci.ics.jung.algorithms.layout.CircleLayout;
 import edu.uci.ics.jung.algorithms.layout.FRLayout;
@@ -594,6 +599,11 @@ public class VidyaastraGraphPanel extends JPanel
       JButton refreshBtn = new JButton("Refresh Graph");
       refreshBtn.addActionListener(e -> refreshGraph());
       toolbar.add(refreshBtn);
+
+      // Explain Ontology button
+      JButton explainBtn = new JButton("Explain Ontology");
+      explainBtn.addActionListener(e -> explainOntology());
+      toolbar.add(explainBtn);
 
       add(toolbar, BorderLayout.NORTH);
    }
@@ -1437,6 +1447,104 @@ public class VidyaastraGraphPanel extends JPanel
          graph.getVertexCount(), graph.getEdgeCount());
       
       viewer.repaint();
+   }
+
+   /**
+    * Explains the ontology by sending the full OWL content to the LLM
+    * and displaying a bullet-point summary
+    */
+   private void explainOntology()
+   {
+      if (ontology == null) {
+         resultsArea.setText("No ontology loaded.");
+         return;
+      }
+
+      SwingWorker<String, Void> worker = new SwingWorker<String, Void>()
+      {
+         @Override
+         protected String doInBackground() throws Exception
+         {
+            resultsArea.setText("Generating ontology explanation...\n\nPlease wait, analyzing ontology structure...");
+            
+            try {
+               // Get the ontology as OWL functional syntax
+               OWLOntologyManager manager = ontology.getOWLOntologyManager();
+               StringDocumentTarget documentTarget = new StringDocumentTarget();
+               manager.saveOntology(ontology, new FunctionalSyntaxDocumentFormat(), documentTarget);
+               String owlContent = documentTarget.toString();
+               
+               logger.info("Ontology serialized - {} characters", owlContent.length());
+               
+               // Truncate if too large (keep first ~15000 chars to stay within token limits)
+               if (owlContent.length() > 15000) {
+                  owlContent = owlContent.substring(0, 15000) + "\n\n... (truncated for length)";
+                  logger.info("Ontology content truncated to 15000 characters");
+               }
+               
+               // Build prompt for LLM
+               String systemPrompt = "You are an expert in ontology analysis and OWL (Web Ontology Language). " +
+                  "Analyze the provided ontology and create a clear, concise explanation. " +
+                  "Format your response as bullet points describing:\n" +
+                  "- The main purpose/domain of this ontology\n" +
+                  "- Key classes and their relationships\n" +
+                  "- Important properties\n" +
+                  "- Notable individuals (if any)\n" +
+                  "- Overall structure and organization\n\n" +
+                  "Keep it clear and accessible, avoiding overly technical jargon where possible.";
+               
+               String userMessage = "Please analyze this OWL ontology and explain what it represents:\n\n" + owlContent;
+               
+               // Get API configuration
+               String apiKey = VidyaastraPreferences.getOpenAiApiKey();
+               String model = VidyaastraPreferences.getOpenAiModel();
+               String baseUrl = VidyaastraPreferences.getOpenAiBaseUrl();
+               
+               if (apiKey == null || apiKey.trim().isEmpty()) {
+                  return "ERROR: OpenAI API key not configured. Please set it in Preferences.";
+               }
+               if (model == null || model.trim().isEmpty()) {
+                  model = "gpt-4o-mini"; // Default model
+               }
+               if (baseUrl == null || baseUrl.trim().isEmpty()) {
+                  baseUrl = "https://api.openai.com/v1"; // Default base URL
+               }
+               
+               // Call OpenAI
+               OpenAiCaller caller = new OpenAiCaller(apiKey, model, baseUrl);
+               String response = caller.generateCompletion(systemPrompt, userMessage);
+               
+               logger.info("Received ontology explanation from LLM - {} characters", response.length());
+               
+               return response;
+               
+            } catch (OWLOntologyStorageException e) {
+               logger.error("Failed to serialize ontology", e);
+               return "ERROR: Failed to serialize ontology: " + e.getMessage();
+            } catch (Exception e) {
+               logger.error("Failed to explain ontology", e);
+               return "ERROR: Failed to get explanation from LLM: " + e.getMessage();
+            }
+         }
+
+         @Override
+         protected void done()
+         {
+            try {
+               String explanation = get();
+               
+               // Display the explanation
+               resultsArea.setText("=== ONTOLOGY EXPLANATION ===\n\n" + explanation);
+               resultsArea.setCaretPosition(0); // Scroll to top
+               
+            } catch (Exception e) {
+               logger.error("Error displaying ontology explanation", e);
+               resultsArea.setText("ERROR: " + e.getMessage());
+            }
+         }
+      };
+      
+      worker.execute();
    }
 
    public void dispose()
