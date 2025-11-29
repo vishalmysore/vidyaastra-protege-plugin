@@ -741,7 +741,7 @@ public class VidyaastraGraphPanel extends JPanel {
             } else if ("complex".equalsIgnoreCase(queryType)) {
                return executeComplexQuery(targetEntity, filters);
             } else {
-               return executeQueryOnGraph(queryType, targetEntity);
+               return executeQueryOnOntology(queryType, targetEntity);
             }
          }
 
@@ -935,6 +935,22 @@ public class VidyaastraGraphPanel extends JPanel {
 
          prompt.append("\nAvailable Individuals:\n");
          ontology.getIndividualsInSignature().stream()
+               .limit(20)
+               .forEach(ind -> prompt.append("  - ").append(ind.getIRI().getShortForm()).append("\n"));
+      }
+
+      prompt.append("\nYour response MUST be in this exact format:\n");
+      prompt.append("QUERY_TYPE: [instances|classes|properties|relationships|individual]\n");
+      prompt.append("TARGET: [search term]\n\n");
+
+      return prompt.toString();
+   }
+
+   /**
+    * Method to execute query based on parsed AI response
+    */
+   private String executeQueryOnOntology(String queryType, String target) {
+      try {
          StringBuilder results = new StringBuilder();
 
          if (queryType == null || target == null || target.isEmpty()) {
