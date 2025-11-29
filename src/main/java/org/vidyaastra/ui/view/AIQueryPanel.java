@@ -12,12 +12,19 @@ import java.awt.Insets;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
@@ -44,10 +51,10 @@ import org.semanticweb.owlapi.util.OntologyIRIShortFormProvider;
 
 /**
  * This is the main AI Integration user interface for Vidyaastra Plugin.
- * It contains OpenAI configuration fields, a query input area and a response display area.
+ * It contains OpenAI configuration fields, a query input area and a response
+ * display area.
  */
-public class AIQueryPanel extends JPanel
-{
+public class AIQueryPanel extends JPanel {
    private static final long serialVersionUID = 1L;
 
    private OWLOntology ontology;
@@ -58,22 +65,26 @@ public class AIQueryPanel extends JPanel
    private JTextField baseUrlField;
    private JPasswordField apiKeyField;
    private JTextField modelField;
-   
+
    // Operation type selection
    private JRadioButton basicQueryRadio;
    private JRadioButton createOntologyRadio;
    private JRadioButton modifyOntologyRadio;
    private OntologyOperationType currentOperationType = OntologyOperationType.BASIC_QUERY;
-   
+
    // Query/Response fields
    private JLabel queryLabel;
    private JTextArea queryTextArea;
    private JTextArea responseTextArea;
    private JButton sendButton;
    private JButton clearButton;
+   private JButton exportButton;
 
-   public AIQueryPanel(OWLOntology ontology, OWLEditorKit editorKit, VidyaastraDialogManager dialogHelper)
-   {
+   // History
+   private JComboBox<String> historyDropdown;
+   private List<String> queryHistory = new ArrayList<>();
+
+   public AIQueryPanel(OWLOntology ontology, OWLEditorKit editorKit, VidyaastraDialogManager dialogHelper) {
       this.ontology = ontology;
       this.editorKit = editorKit;
       this.dialogHelper = dialogHelper;
@@ -88,7 +99,7 @@ public class AIQueryPanel extends JPanel
       // Operation Type Selection Panel (top)
       JPanel operationTypePanel = createOperationTypePanel();
       mainPanel.add(operationTypePanel, BorderLayout.NORTH);
-      
+
       // Center panel with config and query/response
       JPanel centerPanel = new JPanel(new BorderLayout(0, 10));
 
@@ -99,7 +110,7 @@ public class AIQueryPanel extends JPanel
       // Query and Response Section (center)
       JPanel queryResponsePanel = createQueryResponsePanel();
       centerPanel.add(queryResponsePanel, BorderLayout.CENTER);
-      
+
       mainPanel.add(centerPanel, BorderLayout.CENTER);
 
       // Button Panel (bottom)
@@ -110,43 +121,41 @@ public class AIQueryPanel extends JPanel
       loadPreferences();
    }
 
-   private JPanel createOperationTypePanel()
-   {
+   private JPanel createOperationTypePanel() {
       JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
       TitledBorder border = BorderFactory.createTitledBorder(
-         BorderFactory.createEtchedBorder(), "Operation Mode");
+            BorderFactory.createEtchedBorder(), "Operation Mode");
       border.setTitleFont(new Font("Arial", Font.BOLD, 12));
       panel.setBorder(border);
-      
+
       basicQueryRadio = new JRadioButton(OntologyOperationType.BASIC_QUERY.getDisplayName());
       basicQueryRadio.setSelected(true);
       basicQueryRadio.setToolTipText(OntologyOperationType.BASIC_QUERY.getDescription());
       basicQueryRadio.addActionListener(e -> updateOperationType(OntologyOperationType.BASIC_QUERY));
-      
+
       createOntologyRadio = new JRadioButton(OntologyOperationType.CREATE_ONTOLOGY.getDisplayName());
       createOntologyRadio.setToolTipText(OntologyOperationType.CREATE_ONTOLOGY.getDescription());
       createOntologyRadio.addActionListener(e -> updateOperationType(OntologyOperationType.CREATE_ONTOLOGY));
-      
+
       modifyOntologyRadio = new JRadioButton(OntologyOperationType.MODIFY_ONTOLOGY.getDisplayName());
       modifyOntologyRadio.setToolTipText(OntologyOperationType.MODIFY_ONTOLOGY.getDescription());
       modifyOntologyRadio.addActionListener(e -> updateOperationType(OntologyOperationType.MODIFY_ONTOLOGY));
-      
+
       ButtonGroup group = new ButtonGroup();
       group.add(basicQueryRadio);
       group.add(createOntologyRadio);
       group.add(modifyOntologyRadio);
-      
+
       panel.add(basicQueryRadio);
       panel.add(createOntologyRadio);
       panel.add(modifyOntologyRadio);
-      
+
       return panel;
    }
-   
-   private void updateOperationType(OntologyOperationType type)
-   {
+
+   private void updateOperationType(OntologyOperationType type) {
       currentOperationType = type;
-      
+
       // Update UI labels based on operation type
       switch (type) {
          case BASIC_QUERY:
@@ -164,11 +173,10 @@ public class AIQueryPanel extends JPanel
       }
    }
 
-   private JPanel createConfigurationPanel()
-   {
+   private JPanel createConfigurationPanel() {
       JPanel panel = new JPanel(new GridBagLayout());
       TitledBorder border = BorderFactory.createTitledBorder(
-         BorderFactory.createEtchedBorder(), "OpenAI Configuration");
+            BorderFactory.createEtchedBorder(), "OpenAI Configuration");
       border.setTitleFont(new Font("Arial", Font.BOLD, 12));
       panel.setBorder(border);
 
@@ -216,16 +224,15 @@ public class AIQueryPanel extends JPanel
       gbc.gridwidth = 2;
       gbc.insets = new Insets(5, 10, 5, 10);
       JLabel helpLabel = new JLabel("<html><i><font size='-2'>Examples: " +
-         "https://api.openai.com/v1 | Model: gpt-4o-mini, gpt-4o | " +
-         "Demo: http://yourdemoserver (API Key: demokey)</font></i></html>");
+            "https://api.openai.com/v1 | Model: gpt-4o-mini, gpt-4o | " +
+            "Demo: http://yourdemoserver (API Key: demokey)</font></i></html>");
       helpLabel.setForeground(Color.DARK_GRAY);
       panel.add(helpLabel, gbc);
 
       return panel;
    }
 
-   private JPanel createQueryResponsePanel()
-   {
+   private JPanel createQueryResponsePanel() {
       JPanel panel = new JPanel(new GridBagLayout());
       GridBagConstraints gbc = new GridBagConstraints();
       gbc.fill = GridBagConstraints.BOTH;
@@ -259,10 +266,27 @@ public class AIQueryPanel extends JPanel
       gbc.weighty = 0.3;
       panel.add(queryScrollPane, gbc);
 
+      // History Dropdown
+      gbc.gridy = 3;
+      gbc.weighty = 0.0;
+      JPanel historyPanel = new JPanel(new BorderLayout(5, 0));
+      historyPanel.add(new JLabel("History: "), BorderLayout.WEST);
+
+      historyDropdown = new JComboBox<>();
+      historyDropdown.addItem("-- Select Previous Query --");
+      historyDropdown.addActionListener(e -> {
+         String selected = (String) historyDropdown.getSelectedItem();
+         if (selected != null && !selected.startsWith("--")) {
+            queryTextArea.setText(selected);
+         }
+      });
+      historyPanel.add(historyDropdown, BorderLayout.CENTER);
+      panel.add(historyPanel, gbc);
+
       // Response Display Section
       JLabel lblResponse = new JLabel("AI Response:");
       lblResponse.setFont(new Font("Arial", Font.BOLD, 12));
-      gbc.gridy = 3;
+      gbc.gridy = 4;
       gbc.weighty = 0.0;
       panel.add(lblResponse, gbc);
 
@@ -275,15 +299,14 @@ public class AIQueryPanel extends JPanel
       responseTextArea.setBackground(new Color(245, 245, 245));
       JScrollPane responseScrollPane = new JScrollPane(responseTextArea);
       responseScrollPane.setPreferredSize(new Dimension(700, 300));
-      gbc.gridy = 4;
+      gbc.gridy = 5;
       gbc.weighty = 0.7;
       panel.add(responseScrollPane, gbc);
 
       return panel;
    }
 
-   private JPanel createButtonPanel()
-   {
+   private JPanel createButtonPanel() {
       JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
       panel.setBorder(new EmptyBorder(5, 10, 10, 10));
 
@@ -300,36 +323,38 @@ public class AIQueryPanel extends JPanel
       saveConfigButton.addActionListener(e -> savePreferences());
       panel.add(saveConfigButton);
 
+      exportButton = new JButton("Export Results");
+      exportButton.addActionListener(e -> exportResults());
+      panel.add(exportButton);
+
       return panel;
    }
 
-   private void loadPreferences()
-   {
+   private void loadPreferences() {
       baseUrlField.setText(VidyaastraPreferences.getOpenAiBaseUrl());
       apiKeyField.setText(VidyaastraPreferences.getOpenAiApiKey());
       modelField.setText(VidyaastraPreferences.getOpenAiModel());
    }
 
-   private void savePreferences()
-   {
+   private void savePreferences() {
       VidyaastraPreferences.setOpenAiBaseUrl(baseUrlField.getText().trim());
       VidyaastraPreferences.setOpenAiApiKey(new String(apiKeyField.getPassword()));
       VidyaastraPreferences.setOpenAiModel(modelField.getText().trim());
       dialogHelper.showMessageDialog(this, "Configuration saved successfully!");
    }
 
-   private void sendQuery()
-   {
+   private void sendQuery() {
       String query = queryTextArea.getText().trim();
       String baseUrl = baseUrlField.getText().trim();
       String apiKey = new String(apiKeyField.getPassword()).trim();
       String model = modelField.getText().trim();
 
       if (query.isEmpty()) {
-         dialogHelper.showMessageDialog(this, "Please enter " + 
-            (currentOperationType == OntologyOperationType.BASIC_QUERY ? "a query" : 
-             currentOperationType == OntologyOperationType.CREATE_ONTOLOGY ? "an ontology description" : 
-             "a modification request") + " before sending.");
+         dialogHelper.showMessageDialog(this, "Please enter " +
+               (currentOperationType == OntologyOperationType.BASIC_QUERY ? "a query"
+                     : currentOperationType == OntologyOperationType.CREATE_ONTOLOGY ? "an ontology description"
+                           : "a modification request")
+               + " before sending.");
          return;
       }
 
@@ -348,6 +373,9 @@ public class AIQueryPanel extends JPanel
       responseTextArea.append("Contacting " + model + " at " + baseUrl + "\n\n");
       sendButton.setEnabled(false);
 
+      // Add to history
+      addToHistory(query);
+
       // Execute based on operation type
       switch (currentOperationType) {
          case BASIC_QUERY:
@@ -361,9 +389,8 @@ public class AIQueryPanel extends JPanel
             break;
       }
    }
-   
-   private void executeBasicQuery(String query, String apiKey, String model, String baseUrl)
-   {
+
+   private void executeBasicQuery(String query, String apiKey, String model, String baseUrl) {
       // Use SwingWorker to call OpenAI in background
       SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
          @Override
@@ -372,9 +399,9 @@ public class AIQueryPanel extends JPanel
             OpenAiCaller caller = new OpenAiCaller(apiKey, model, baseUrl);
 
             // Build system prompt with ontology context
-            String systemPrompt = "You are an expert ontology assistant helping with the ontology: " + 
-                                  getTitle(ontology) + ". Provide clear, concise answers about ontology structure, " +
-                                  "classes, properties, and relationships.";
+            String systemPrompt = "You are an expert ontology assistant helping with the ontology: " +
+                  getTitle(ontology) + ". Provide clear, concise answers about ontology structure, " +
+                  "classes, properties, and relationships.";
 
             // Call OpenAI
             return caller.generateCompletion(systemPrompt, query);
@@ -397,9 +424,8 @@ public class AIQueryPanel extends JPanel
 
       worker.execute();
    }
-   
-   private void executeCreateOntology(String description, String apiKey, String model, String baseUrl)
-   {
+
+   private void executeCreateOntology(String description, String apiKey, String model, String baseUrl) {
       SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
          @Override
          protected String doInBackground() throws Exception {
@@ -412,32 +438,32 @@ public class AIQueryPanel extends JPanel
             try {
                String owlContent = get();
                responseTextArea.setText("=== Generated Ontology ===\n\n");
-               
+
                // Show a preview (first 1000 chars)
-               String preview = owlContent.length() > 1000 ? 
-                  owlContent.substring(0, 1000) + "\n\n... [truncated] ..." : owlContent;
+               String preview = owlContent.length() > 1000 ? owlContent.substring(0, 1000) + "\n\n... [truncated] ..."
+                     : owlContent;
                responseTextArea.append(preview);
                responseTextArea.append("\n\n===================\n\n");
-               
+
                // Ask user if they want to save
-               int result = dialogHelper.showConfirmDialog(AIQueryPanel.this, 
-                  "Save Ontology", 
-                  "Ontology generated successfully! Do you want to save it to a file?");
-               
+               int result = dialogHelper.showConfirmDialog(AIQueryPanel.this,
+                     "Save Ontology",
+                     "Ontology generated successfully! Do you want to save it to a file?");
+
                System.out.println("User save dialog result: " + result + " (0=YES, 1=NO)");
-               
+
                if (result == 0) { // YES
                   System.out.println("User chose to save. Creating OntologyGenerator...");
                   try {
                      OntologyGenerator generator = new OntologyGenerator(editorKit, dialogHelper);
                      System.out.println("OntologyGenerator created successfully");
-                     
+
                      // Generate a meaningful filename from the description
                      String suggestedFileName = AIQueryPanel.this.generateFileName(description);
-                     
+
                      // saveOntology will handle file chooser and ask about loading into Protege
                      java.io.File savedFile = generator.saveOntology(owlContent, suggestedFileName, AIQueryPanel.this);
-                     
+
                      if (savedFile != null) {
                         responseTextArea.append("\n✓ Ontology saved to: " + savedFile.getAbsolutePath() + "\n");
                      } else {
@@ -446,8 +472,8 @@ public class AIQueryPanel extends JPanel
                   } catch (Exception saveEx) {
                      responseTextArea.append("\n❌ Error saving ontology: " + saveEx.getMessage() + "\n");
                      saveEx.printStackTrace();
-                     dialogHelper.showErrorMessageDialog(AIQueryPanel.this, 
-                        "Error saving ontology: " + saveEx.getMessage());
+                     dialogHelper.showErrorMessageDialog(AIQueryPanel.this,
+                           "Error saving ontology: " + saveEx.getMessage());
                   }
                }
             } catch (Exception e) {
@@ -460,16 +486,15 @@ public class AIQueryPanel extends JPanel
 
       worker.execute();
    }
-   
-   private void executeModifyOntology(String modificationRequest, String apiKey, String model, String baseUrl)
-   {
+
+   private void executeModifyOntology(String modificationRequest, String apiKey, String model, String baseUrl) {
       if (ontology == null) {
          responseTextArea.setText("❌ Error: No ontology loaded.\n\n");
          responseTextArea.append("Please load an ontology in Protege before attempting modifications.\n");
          sendButton.setEnabled(true);
          return;
       }
-      
+
       SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
          @Override
          protected String doInBackground() throws Exception {
@@ -496,9 +521,8 @@ public class AIQueryPanel extends JPanel
 
       worker.execute();
    }
-   
-   private void displayError(Exception e)
-   {
+
+   private void displayError(Exception e) {
       responseTextArea.setText("❌ Error:\n\n");
       responseTextArea.append(e.getMessage() + "\n\n");
       if (e.getCause() != null) {
@@ -512,51 +536,89 @@ public class AIQueryPanel extends JPanel
       dialogHelper.showErrorMessageDialog(AIQueryPanel.this, "Error: " + e.getMessage());
    }
 
-   private void clearFields()
-   {
+   private void clearFields() {
       queryTextArea.setText("");
       responseTextArea.setText("");
    }
-   
+
+   private void addToHistory(String query) {
+      if (!queryHistory.contains(query)) {
+         queryHistory.add(0, query); // Add to top
+         // Limit history size
+         if (queryHistory.size() > 20) {
+            queryHistory.remove(queryHistory.size() - 1);
+         }
+
+         // Update dropdown
+         historyDropdown.removeAllItems();
+         historyDropdown.addItem("-- Select Previous Query --");
+         for (String q : queryHistory) {
+            historyDropdown.addItem(q);
+         }
+      }
+   }
+
+   private void exportResults() {
+      String content = responseTextArea.getText();
+      if (content.isEmpty()) {
+         dialogHelper.showMessageDialog(this, "Nothing to export.");
+         return;
+      }
+
+      JFileChooser fileChooser = new JFileChooser();
+      fileChooser.setDialogTitle("Export Results");
+      fileChooser.setSelectedFile(new File("vidyaastra-results.txt"));
+
+      int userSelection = fileChooser.showSaveDialog(this);
+      if (userSelection == JFileChooser.APPROVE_OPTION) {
+         File fileToSave = fileChooser.getSelectedFile();
+         try (FileWriter writer = new FileWriter(fileToSave)) {
+            writer.write(content);
+            dialogHelper.showMessageDialog(this, "Results saved to " + fileToSave.getAbsolutePath());
+         } catch (IOException e) {
+            dialogHelper.showErrorMessageDialog(this, "Error saving file: " + e.getMessage());
+         }
+      }
+   }
+
    /**
     * Generates a filename from the user's description.
     * Takes the first few meaningful words and creates a valid filename.
     */
-   private String generateFileName(String description)
-   {
+   private String generateFileName(String description) {
       if (description == null || description.trim().isEmpty()) {
          return "new-ontology.owl";
       }
-      
+
       // Take first 50 chars to avoid too long filenames
       String shortened = description.trim().substring(0, Math.min(50, description.trim().length()));
-      
-      // Extract meaningful words (remove common words like "create", "ontology", etc.)
+
+      // Extract meaningful words (remove common words like "create", "ontology",
+      // etc.)
       String cleaned = shortened.toLowerCase()
-         .replaceAll("\\b(create|new|ontology|for|about|on|the|a|an)\\b", "")
-         .trim();
-      
+            .replaceAll("\\b(create|new|ontology|for|about|on|the|a|an)\\b", "")
+            .trim();
+
       // Replace spaces and special chars with hyphens
       cleaned = cleaned.replaceAll("[^a-z0-9]+", "-");
-      
+
       // Remove leading/trailing hyphens
       cleaned = cleaned.replaceAll("^-+|-+$", "");
-      
+
       // If nothing meaningful left, use generic name
       if (cleaned.isEmpty() || cleaned.length() < 3) {
          return "new-ontology.owl";
       }
-      
+
       // Limit to reasonable length and add extension
       if (cleaned.length() > 30) {
          cleaned = cleaned.substring(0, 30).replaceAll("-+$", "");
       }
-      
+
       return cleaned + "-ontology.owl";
    }
 
-   private String getTitle(OWLOntology ontology)
-   {
+   private String getTitle(OWLOntology ontology) {
       if (ontology == null) {
          return "No Ontology Loaded";
       }
@@ -570,21 +632,18 @@ public class AIQueryPanel extends JPanel
       return "Anonymous Ontology";
    }
 
-   public OWLOntology getActiveOntology()
-   {
+   public OWLOntology getActiveOntology() {
       return ontology;
    }
 
-   public OWLEditorKit getEditorKit()
-   {
+   public OWLEditorKit getEditorKit() {
       return editorKit;
    }
 
    /**
     * Creates and shows the dialog for AI Integration.
     */
-   public static void showDialog(OWLOntology ontology, OWLEditorKit editorKit)
-   {
+   public static void showDialog(OWLOntology ontology, OWLEditorKit editorKit) {
       VidyaastraDialogManager dialogHelper = new VidyaastraDialogManager();
       AIQueryPanel panel = new AIQueryPanel(ontology, editorKit, dialogHelper);
 
@@ -597,10 +656,9 @@ public class AIQueryPanel extends JPanel
 
       // ESC to close
       panel.registerKeyboardAction(
-         e -> dialog.dispose(),
-         KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
-         JComponent.WHEN_IN_FOCUSED_WINDOW
-      );
+            e -> dialog.dispose(),
+            KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+            JComponent.WHEN_IN_FOCUSED_WINDOW);
 
       dialog.addWindowListener(new WindowAdapter() {
          @Override
