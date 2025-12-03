@@ -8,7 +8,7 @@
         </repository>
     </distributionManagement>
 
-   <groupId>edu.stanford.protege</groupId>
+   <groupId>org.vidyaastra</groupId>
    <artifactId>vidyaastra</artifactId>
    <version>1.0.1</version>
    <packaging>bundle</packaging>
