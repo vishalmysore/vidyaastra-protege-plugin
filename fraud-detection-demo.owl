@@ -1,0 +1,168 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="http://www.semanticweb.org/vidyaastra/fraud-detection#"
+     xml:base="http://www.semanticweb.org/vidyaastra/fraud-detection"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:fraud="http://www.semanticweb.org/vidyaastra/fraud-detection#">
+    <owl:Ontology rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection"/>
+    
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Object Properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#sendsMoneyTo -->
+    <owl:ObjectProperty rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#sendsMoneyTo">
+        <rdfs:domain rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#Account"/>
+        <rdfs:range rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#Account"/>
+    </owl:ObjectProperty>
+    
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#involvedIn -->
+    <owl:ObjectProperty rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#involvedIn">
+        <rdfs:domain rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#Account"/>
+        <rdfs:range rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#FraudPattern"/>
+    </owl:ObjectProperty>
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#detectedBy -->
+    <owl:ObjectProperty rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#detectedBy">
+        <rdfs:domain rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#FraudPattern"/>
+        <rdfs:range rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#DetectionAlgorithm"/>
+    </owl:ObjectProperty>
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#hasRiskLevel -->
+    <owl:ObjectProperty rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#hasRiskLevel">
+        <rdfs:domain rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#FraudPattern"/>
+        <rdfs:range rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#RiskLevel"/>
+    </owl:ObjectProperty>
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Data Properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#accountId -->
+    <owl:DatatypeProperty rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#accountId">
+        <rdfs:domain rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#Account"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#balance -->
+    <owl:DatatypeProperty rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#balance">
+        <rdfs:domain rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#Account"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#decimal"/>
+    </owl:DatatypeProperty>
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#riskScore -->
+    <owl:DatatypeProperty rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#riskScore">
+        <rdfs:domain rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#FraudPattern"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#decimal"/>
+    </owl:DatatypeProperty>
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#totalAmount -->
+    <owl:DatatypeProperty rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#totalAmount">
+        <rdfs:domain rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#FraudPattern"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#decimal"/>
+    </owl:DatatypeProperty>
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Classes
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#Account -->
+    <owl:Class rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#Account"/>
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#FraudPattern -->
+    <owl:Class rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#FraudPattern"/>
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#CircularMoneyFlow -->
+    <owl:Class rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#CircularMoneyFlow">
+        <rdfs:subClassOf rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#FraudPattern"/>
+    </owl:Class>
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#DetectionAlgorithm -->
+    <owl:Class rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#DetectionAlgorithm"/>
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#RiskLevel -->
+    <owl:Class rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#RiskLevel"/>
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Individuals
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#HighRisk -->
+    <owl:NamedIndividual rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#HighRisk">
+        <rdf:type rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#RiskLevel"/>
+    </owl:NamedIndividual>
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#DFS_Algorithm -->
+    <owl:NamedIndividual rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#DFS_Algorithm">
+        <rdf:type rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#DetectionAlgorithm"/>
+    </owl:NamedIndividual>
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#CircularFlow_001 -->
+    <owl:NamedIndividual rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#CircularFlow_001">
+        <rdf:type rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#CircularMoneyFlow"/>
+        <detectedBy rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#DFS_Algorithm"/>
+        <hasRiskLevel rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#HighRisk"/>
+        <riskScore rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal">0.95</riskScore>
+        <totalAmount rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal">200000.00</totalAmount>
+    </owl:NamedIndividual>
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#Account_A -->
+    <owl:NamedIndividual rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#Account_A">
+        <rdf:type rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#Account"/>
+        <accountId>ACC-001</accountId>
+        <balance rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal">5000.00</balance>
+        <sendsMoneyTo rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#Account_B"/>
+        <involvedIn rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#CircularFlow_001"/>
+    </owl:NamedIndividual>
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#Account_B -->
+    <owl:NamedIndividual rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#Account_B">
+        <rdf:type rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#Account"/>
+        <accountId>ACC-002</accountId>
+        <balance rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal">1000.00</balance>
+        <sendsMoneyTo rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#Account_C"/>
+        <involvedIn rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#CircularFlow_001"/>
+    </owl:NamedIndividual>
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#Account_C -->
+    <owl:NamedIndividual rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#Account_C">
+        <rdf:type rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#Account"/>
+        <accountId>ACC-003</accountId>
+        <balance rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal">200.00</balance>
+        <sendsMoneyTo rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#Account_D"/>
+        <involvedIn rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#CircularFlow_001"/>
+    </owl:NamedIndividual>
+
+    <!-- http://www.semanticweb.org/vidyaastra/fraud-detection#Account_D -->
+    <owl:NamedIndividual rdf:about="http://www.semanticweb.org/vidyaastra/fraud-detection#Account_D">
+        <rdf:type rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#Account"/>
+        <accountId>ACC-004</accountId>
+        <balance rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal">50.00</balance>
+        <sendsMoneyTo rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#Account_A"/>
+        <involvedIn rdf:resource="http://www.semanticweb.org/vidyaastra/fraud-detection#CircularFlow_001"/>
+    </owl:NamedIndividual>
+
+</rdf:RDF>

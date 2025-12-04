@@ -745,8 +745,25 @@ public class VidyaastraGraphPanel extends JPanel {
             }
          }
 
-         private void parseJsonResponse(String json) {
+         private void parseJsonResponse(String response) {
             try {
+               // Check if response is in plain text format (QUERY_TYPE: xxx\nTARGET: xxx)
+               if (response.contains("QUERY_TYPE:") && response.contains("TARGET:")) {
+                  // Parse plain text format
+                  String[] lines = response.split("\n");
+                  for (String line : lines) {
+                     line = line.trim();
+                     if (line.startsWith("QUERY_TYPE:")) {
+                        queryType = line.substring("QUERY_TYPE:".length()).trim();
+                     } else if (line.startsWith("TARGET:")) {
+                        targetEntity = line.substring("TARGET:".length()).trim();
+                     }
+                  }
+                  return;
+               }
+               
+               // Otherwise, try JSON parsing
+               String json = response;
                // Remove markdown code blocks if present
                json = json.replaceAll("```json", "").replaceAll("```", "").trim();
 
