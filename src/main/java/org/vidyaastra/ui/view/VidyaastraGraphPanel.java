@@ -71,6 +71,7 @@ import edu.uci.ics.jung.algorithms.layout.ISOMLayout;
 import edu.uci.ics.jung.algorithms.layout.KKLayout;
 import edu.uci.ics.jung.algorithms.layout.Layout;
 import edu.uci.ics.jung.algorithms.layout.SpringLayout;
+import edu.uci.ics.jung.algorithms.layout.DAGLayout;
 import edu.uci.ics.jung.graph.DirectedSparseGraph;
 import edu.uci.ics.jung.graph.Graph;
 import edu.uci.ics.jung.visualization.VisualizationViewer;
@@ -115,6 +116,26 @@ public class VidyaastraGraphPanel extends JPanel {
    private void initializeGraph() {
       graph = new DirectedSparseGraph<>();
       buildGraphFromOntology();
+   }
+
+   /**
+    * Gets the display label for an OWL entity.
+    * Prefers rdfs:label annotation, falls back to IRI short form.
+    */
+   private String getEntityLabel(OWLEntity entity) {
+      if (ontology == null) {
+         return entity.getIRI().getShortForm();
+      }
+
+      // Try to get rdfs:label annotation
+      return ontology.getAnnotationAssertionAxioms(entity.getIRI())
+            .stream()
+            .filter(ax -> ax.getProperty().isLabel())
+            .map(ax -> ax.getValue())
+            .filter(val -> val.isLiteral())
+            .map(val -> val.asLiteral().get().getLiteral())
+            .findFirst()
+            .orElse(entity.getIRI().getShortForm());
    }
 
    private void buildGraphFromOntology() {
@@ -369,7 +390,7 @@ public class VidyaastraGraphPanel extends JPanel {
    private void setupNodeRenderer() {
       // Custom vertex label with expand/collapse indicator
       viewer.getRenderContext().setVertexLabelTransformer(entity -> {
-         String label = entity.getIRI().getShortForm();
+         String label = getEntityLabel(entity);
 
          // Add indicator for expandable nodes (both classes and individuals)
          if (hasChildren(entity)) {
@@ -385,7 +406,7 @@ public class VidyaastraGraphPanel extends JPanel {
 
       // Dynamic vertex shapes based on text length
       viewer.getRenderContext().setVertexShapeTransformer(entity -> {
-         String label = entity.getIRI().getShortForm();
+         String label = getEntityLabel(entity);
          int textLength = label.length();
 
          if (entity instanceof OWLClass) {
@@ -442,7 +463,7 @@ public class VidyaastraGraphPanel extends JPanel {
 
       // Better font - smaller for longer text
       viewer.getRenderContext().setVertexFontTransformer(entity -> {
-         String label = entity.getIRI().getShortForm();
+         String label = getEntityLabel(entity);
          int fontSize = label.length() > 12 ? 10 : 11;
 
          if (entity.equals(selectedEntity)) {
